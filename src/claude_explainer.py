@@ -1,10 +1,11 @@
 """
-Phase 5: Claude API Integration
+Phase 5: LLM Integration
 Her film önerisi için kişiselleştirilmiş açıklama üretir.
+Groq API kullanır (ücretsiz, Llama 3 modeli).
 """
 
 import os
-import anthropic
+from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,10 +13,10 @@ load_dotenv()
 _client = None
 
 
-def _get_client() -> anthropic.Anthropic:
+def _get_client() -> Groq:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     return _client
 
 
@@ -23,21 +24,10 @@ def explain_recommendation(
     personality_profile: dict,
     emotion_profile: dict,
     movie: dict,
-    top_artists: list[str] = None,
+    top_artists: list = None,
 ) -> str:
-    """
-    Kullanıcının kişilik profili + film bilgisi verildiğinde
-    Claude'un 2-3 cümlelik kişiselleştirilmiş açıklama üretmesini sağlar.
-
-    Args:
-        personality_profile: assign_personality() çıktısı
-        emotion_profile: {"joy": 0.3, "sadness": 0.5, ...}
-        movie: {"title": ..., "overview": ..., "genres": [...]}
-        top_artists: Kullanıcının top artist'leri (opsiyonel, daha kişisel açıklama için)
-    """
     client = _get_client()
 
-    # Dominant duyguları bul
     dominant_emotions = sorted(
         emotion_profile.items(), key=lambda x: x[1], reverse=True
     )[:3]
@@ -47,7 +37,7 @@ def explain_recommendation(
 
     artists_str = ""
     if top_artists:
-        artists_str = f"\nFavori sanatçılar: {', '.join(top_artists[:5])}"
+        artists_str = f"\nFavorite artists: {', '.join(top_artists[:5])}"
 
     genres_str = ", ".join(movie.get("genres", [])[:3]) or "Drama"
 
@@ -65,28 +55,24 @@ Movie to explain:
 
 Write a personalized 2-3 sentence explanation of WHY this user will love this movie, based on their music personality.
 Be specific about emotional connections between their music taste and the film's themes.
-Write in English, in a warm and engaging tone. Do not start with "This movie" or "Based on".
-"""
+Write in English, warm and engaging tone. Do not start with "This movie" or "Based on"."""
 
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=200,
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
+        max_tokens=200,
+        temperature=0.7,
     )
 
-    return message.content[0].text.strip()
+    return response.choices[0].message.content.strip()
 
 
 def explain_all_recommendations(
     personality_profile: dict,
     emotion_profile: dict,
-    movies: list[dict],
-    top_artists: list[str] = None,
-) -> list[dict]:
-    """
-    Öneri listesindeki her film için Claude açıklaması ekler.
-    Returns: Her filme "claude_explanation" alanı eklenmiş liste
-    """
+    movies: list,
+    top_artists: list = None,
+) -> list:
     results = []
     for i, movie in enumerate(movies):
         print(f"  [{i+1}/{len(movies)}] {movie['title']} için açıklama üretiliyor...")
@@ -95,7 +81,7 @@ def explain_all_recommendations(
                 personality_profile, emotion_profile, movie, top_artists
             )
         except Exception as e:
-            explanation = f"Bu film, {personality_profile['name']} profilinizle harika bir uyum sağlıyor."
+            explanation = f"Your {personality_profile['name']} personality makes this film a compelling watch — it echoes the emotional depth found in your music."
             print(f"  Hata: {e}")
 
         movie_with_explanation = movie.copy()

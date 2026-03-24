@@ -186,47 +186,57 @@ def page_analyze():
     status_text = st.empty()
 
     try:
-        # Adım 1: Spotify verisi
-        status_text.text("🎵 Spotify'dan top track'ler çekiliyor...")
-        sp = get_spotify_client(st.session_state.token_info)
-        user_data = collect_user_data(sp)
-        st.session_state.user_data = user_data
+        # Adım 1: Spotify verisi (cache)
+        if not st.session_state.get("user_data"):
+            status_text.text("🎵 Spotify'dan top track'ler çekiliyor...")
+            sp = get_spotify_client(st.session_state.token_info)
+            user_data = collect_user_data(sp)
+            st.session_state.user_data = user_data
+        else:
+            user_data = st.session_state.user_data
         progress_bar.progress(20)
 
-        # Adım 2: Lyrics
-        status_text.text("📝 Şarkı sözleri çekiliyor (Genius API)...")
-        tracks_df = user_data["tracks_df"]
-        tracks_with_lyrics = fetch_lyrics_for_tracks(tracks_df, top_n=20)
-        progress_bar.progress(40)
+        # Adım 2 & 3: Lyrics + NLP (cache)
+        if not st.session_state.get("emotion_profile"):
+            status_text.text("📝 Şarkı sözleri çekiliyor (Genius API)...")
+            tracks_df = user_data["tracks_df"]
+            tracks_with_lyrics = fetch_lyrics_for_tracks(tracks_df, top_n=20)
+            progress_bar.progress(40)
 
-        # Adım 3: NLP Analizi
-        status_text.text("🧠 Duygu analizi yapılıyor (HuggingFace)...")
-        emotion_profile = compute_emotion_profile(tracks_with_lyrics)
-        st.session_state.emotion_profile = emotion_profile
-        feature_vector = build_user_feature_vector(tracks_df, emotion_profile)
-        st.session_state.feature_vector = feature_vector
+            status_text.text("🧠 Duygu analizi yapılıyor (HuggingFace)...")
+            emotion_profile = compute_emotion_profile(tracks_with_lyrics)
+            st.session_state.emotion_profile = emotion_profile
+            feature_vector = build_user_feature_vector(tracks_df, emotion_profile)
+            st.session_state.feature_vector = feature_vector
+        else:
+            emotion_profile = st.session_state.emotion_profile
+            feature_vector = st.session_state.feature_vector
         progress_bar.progress(60)
 
-        # Adım 4: Kişilik Profili
-        status_text.text("🎭 Kişilik profili belirleniyor...")
-        personality = assign_personality(feature_vector)
-        st.session_state.personality = personality
+        # Adım 4: Kişilik Profili (cache)
+        if not st.session_state.get("personality"):
+            status_text.text("🎭 Kişilik profili belirleniyor...")
+            personality = assign_personality(feature_vector)
+            st.session_state.personality = personality
+        else:
+            personality = st.session_state.personality
         progress_bar.progress(70)
 
-        # Adım 5: Film Önerileri
-        status_text.text("🎬 Filmler yükleniyor ve analiz ediliyor...")
-        movies = fetch_movies(total=5000)
-        embeddings = load_or_build_embeddings(movies)
-        raw_recs = recommend_movies(personality["mood_description"], movies, embeddings, top_n=10)
-        progress_bar.progress(85)
+        # Adım 5: Film Önerileri (cache)
+        if not st.session_state.get("recommendations"):
+            status_text.text("🎬 Filmler yükleniyor ve analiz ediliyor...")
+            movies = fetch_movies(total=5000)
+            embeddings = load_or_build_embeddings(movies)
+            raw_recs = recommend_movies(personality["mood_description"], movies, embeddings, top_n=10)
+            progress_bar.progress(85)
 
-        # Adım 6: Claude Açıklamaları
-        status_text.text("💬 Claude kişiselleştirilmiş açıklamalar yazıyor...")
-        top_artists = user_data["artists_df"]["artist_name"].tolist()[:5]
-        recommendations = explain_all_recommendations(
-            personality, emotion_profile, raw_recs, top_artists
-        )
-        st.session_state.recommendations = recommendations
+            # Adım 6: Claude Açıklamaları
+            status_text.text("💬 Claude kişiselleştirilmiş açıklamalar yazıyor...")
+            top_artists = user_data["artists_df"]["artist_name"].tolist()[:5]
+            recommendations = explain_all_recommendations(
+                personality, emotion_profile, raw_recs, top_artists
+            )
+            st.session_state.recommendations = recommendations
         progress_bar.progress(100)
 
         st.session_state.analysis_done = True
