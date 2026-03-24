@@ -1,0 +1,12 @@
+.env
+.spotify_cache
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+data/
+models/
+*.npy
+*.pkl
+venv/
+.venv/

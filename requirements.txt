@@ -1,0 +1,28 @@
+# Web App
+streamlit>=1.32.0
+
+# Spotify
+spotipy>=2.23.0
+
+# Genius Lyrics
+lyricsgenius>=3.0.1
+
+# NLP & ML
+transformers>=4.38.0
+sentence-transformers>=2.5.0
+scikit-learn>=1.4.0
+torch>=2.2.0
+numpy>=1.26.0
+pandas>=2.2.0
+
+# Visualization
+plotly>=5.19.0
+matplotlib>=3.8.0
+
+# Claude API
+anthropic>=0.20.0
+
+# HTTP & Utils
+requests>=2.31.0
+python-dotenv>=1.0.0
+Pillow>=10.2.0
