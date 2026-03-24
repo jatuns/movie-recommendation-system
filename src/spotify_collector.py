@@ -1,12 +1,17 @@
 """
 Phase 1: Spotify OAuth & Data Collection
-Kullanıcının top tracks, top artists ve audio features verilerini çeker.
+Kullanıcının top tracks, top artists verilerini çeker.
+Not: audio-features endpoint Spotify tarafından 2024'te kısıtlandı.
+Bunun yerine artist genres'den türetilmiş özellikler kullanılıyor.
 """
+
+from __future__ import annotations
 
 import os
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
+import numpy as np
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,16 +22,65 @@ SCOPE = (
     "user-read-private"
 )
 
+# Genre → audio özellik tahmini (audio-features API yerine)
+GENRE_FEATURE_MAP = {
+    "pop":              {"energy": 0.7, "valence": 0.7, "danceability": 0.7, "acousticness": 0.2, "tempo": 120},
+    "rock":             {"energy": 0.8, "valence": 0.5, "danceability": 0.5, "acousticness": 0.1, "tempo": 130},
+    "hip hop":          {"energy": 0.7, "valence": 0.6, "danceability": 0.8, "acousticness": 0.1, "tempo": 95},
+    "rap":              {"energy": 0.7, "valence": 0.5, "danceability": 0.8, "acousticness": 0.1, "tempo": 95},
+    "r&b":              {"energy": 0.6, "valence": 0.6, "danceability": 0.75, "acousticness": 0.3, "tempo": 95},
+    "soul":             {"energy": 0.5, "valence": 0.6, "danceability": 0.65, "acousticness": 0.4, "tempo": 90},
+    "jazz":             {"energy": 0.4, "valence": 0.6, "danceability": 0.5, "acousticness": 0.7, "tempo": 120},
+    "classical":        {"energy": 0.3, "valence": 0.5, "danceability": 0.2, "acousticness": 0.9, "tempo": 100},
+    "electronic":       {"energy": 0.8, "valence": 0.6, "danceability": 0.8, "acousticness": 0.05, "tempo": 128},
+    "dance":            {"energy": 0.85, "valence": 0.7, "danceability": 0.85, "acousticness": 0.05, "tempo": 128},
+    "edm":              {"energy": 0.9, "valence": 0.65, "danceability": 0.85, "acousticness": 0.02, "tempo": 130},
+    "indie":            {"energy": 0.5, "valence": 0.5, "danceability": 0.5, "acousticness": 0.4, "tempo": 110},
+    "alternative":      {"energy": 0.6, "valence": 0.4, "danceability": 0.45, "acousticness": 0.3, "tempo": 120},
+    "metal":            {"energy": 0.95, "valence": 0.3, "danceability": 0.4, "acousticness": 0.05, "tempo": 150},
+    "punk":             {"energy": 0.9, "valence": 0.4, "danceability": 0.5, "acousticness": 0.05, "tempo": 160},
+    "folk":             {"energy": 0.3, "valence": 0.6, "danceability": 0.35, "acousticness": 0.85, "tempo": 90},
+    "country":          {"energy": 0.6, "valence": 0.7, "danceability": 0.6, "acousticness": 0.5, "tempo": 110},
+    "blues":            {"energy": 0.4, "valence": 0.4, "danceability": 0.45, "acousticness": 0.6, "tempo": 85},
+    "reggae":           {"energy": 0.5, "valence": 0.8, "danceability": 0.7, "acousticness": 0.3, "tempo": 80},
+    "latin":            {"energy": 0.75, "valence": 0.8, "danceability": 0.85, "acousticness": 0.2, "tempo": 100},
+    "k-pop":            {"energy": 0.8, "valence": 0.75, "danceability": 0.8, "acousticness": 0.1, "tempo": 120},
+    "ambient":          {"energy": 0.2, "valence": 0.4, "danceability": 0.2, "acousticness": 0.7, "tempo": 80},
+    "trap":             {"energy": 0.7, "valence": 0.4, "danceability": 0.75, "acousticness": 0.05, "tempo": 140},
+    "acoustic":         {"energy": 0.3, "valence": 0.6, "danceability": 0.35, "acousticness": 0.9, "tempo": 90},
+    "singer-songwriter":{"energy": 0.35, "valence": 0.5, "danceability": 0.35, "acousticness": 0.75, "tempo": 95},
+}
+
+DEFAULT_FEATURES = {"energy": 0.5, "valence": 0.5, "danceability": 0.5, "acousticness": 0.3, "tempo": 110}
+
+
+def _estimate_features_from_genres(genres: list[str]) -> dict:
+    """Artist genre listesinden audio feature tahmini yapar."""
+    matched = []
+    for genre in genres:
+        genre_lower = genre.lower()
+        for key, features in GENRE_FEATURE_MAP.items():
+            if key in genre_lower:
+                matched.append(features)
+                break
+
+    if not matched:
+        return DEFAULT_FEATURES.copy()
+
+    return {
+        col: float(np.mean([f[col] for f in matched]))
+        for col in DEFAULT_FEATURES
+    }
+
 
 def get_spotify_client(token_info: dict = None) -> spotipy.Spotify:
-    """Spotify istemcisi döndürür. Streamlit session token varsa onu kullanır."""
     if token_info:
         return spotipy.Spotify(auth=token_info["access_token"])
 
     auth_manager = SpotifyOAuth(
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8501/callback"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8501/callback"),
         scope=SCOPE,
         cache_path=".spotify_cache",
         show_dialog=True,
@@ -35,11 +89,10 @@ def get_spotify_client(token_info: dict = None) -> spotipy.Spotify:
 
 
 def get_auth_url() -> str:
-    """Spotify OAuth login URL'ini döndürür."""
     auth_manager = SpotifyOAuth(
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8501/callback"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8501/callback"),
         scope=SCOPE,
         show_dialog=True,
     )
@@ -47,83 +100,48 @@ def get_auth_url() -> str:
 
 
 def exchange_code_for_token(code: str) -> dict:
-    """Authorization code'u token'a çevirir."""
     auth_manager = SpotifyOAuth(
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8501/callback"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8501/callback"),
         scope=SCOPE,
     )
     return auth_manager.get_access_token(code, as_dict=True)
 
 
 def get_top_tracks(sp: spotipy.Spotify, limit: int = 50) -> list[dict]:
-    """Kullanıcının son 4 haftadaki top track'lerini çeker."""
     results = sp.current_user_top_tracks(limit=limit, time_range="medium_term")
     tracks = []
-    for item in results["items"]:
+    for item in results.get("items", []):
         tracks.append({
-            "track_id": item["id"],
-            "track_name": item["name"],
-            "artist_name": item["artists"][0]["name"],
-            "artist_id": item["artists"][0]["id"],
-            "popularity": item["popularity"],
-            "album_name": item["album"]["name"],
+            "track_id": item.get("id"),
+            "track_name": item.get("name"),
+            "artist_name": item["artists"][0]["name"] if item.get("artists") else "Unknown",
+            "artist_id": item["artists"][0]["id"] if item.get("artists") else None,
+            "popularity": item.get("popularity", 0),
+            "album_name": item.get("album", {}).get("name", ""),
         })
     return tracks
 
 
 def get_top_artists(sp: spotipy.Spotify, limit: int = 20) -> list[dict]:
-    """Kullanıcının top artist'lerini çeker."""
     results = sp.current_user_top_artists(limit=limit, time_range="medium_term")
     artists = []
-    for item in results["items"]:
+    for item in results.get("items", []):
         artists.append({
-            "artist_id": item["id"],
-            "artist_name": item["name"],
-            "genres": ", ".join(item["genres"][:3]),
-            "popularity": item["popularity"],
+            "artist_id": item.get("id"),
+            "artist_name": item.get("name"),
+            "genres": item.get("genres", []),
+            "genres_str": ", ".join(item.get("genres", [])[:3]),
+            "popularity": item.get("popularity", 0),
         })
     return artists
 
 
-def get_audio_features(sp: spotipy.Spotify, track_ids: list[str]) -> list[dict]:
-    """
-    Track ID listesi için Spotify audio features çeker.
-    Özellikler: energy, valence, tempo, danceability, acousticness,
-                instrumentalness, loudness, speechiness
-    """
-    features = []
-    # Spotify API max 100 track per request
-    for i in range(0, len(track_ids), 100):
-        batch = track_ids[i : i + 100]
-        results = sp.audio_features(batch)
-        for f in results:
-            if f is None:
-                continue
-            features.append({
-                "track_id": f["id"],
-                "energy": f["energy"],
-                "valence": f["valence"],
-                "tempo": f["tempo"],
-                "danceability": f["danceability"],
-                "acousticness": f["acousticness"],
-                "instrumentalness": f["instrumentalness"],
-                "loudness": f["loudness"],
-                "speechiness": f["speechiness"],
-            })
-    return features
-
-
 def collect_user_data(sp: spotipy.Spotify) -> dict:
     """
-    Tüm kullanıcı verisini toplar ve birleştirilmiş DataFrame döndürür.
-    Returns:
-        {
-            "tracks_df": DataFrame (tracks + audio features birleştirilmiş),
-            "artists_df": DataFrame,
-            "user_info": dict,
-        }
+    Top tracks + top artists çeker.
+    Audio features API kısıtlı olduğundan genre'dan tahmin edilir.
     """
     user_info = sp.current_user()
 
@@ -131,23 +149,32 @@ def collect_user_data(sp: spotipy.Spotify) -> dict:
     tracks = get_top_tracks(sp, limit=50)
     tracks_df = pd.DataFrame(tracks)
 
-    print("Audio features çekiliyor...")
-    track_ids = tracks_df["track_id"].tolist()
-    features = get_audio_features(sp, track_ids)
-    features_df = pd.DataFrame(features)
-
-    merged_df = tracks_df.merge(features_df, on="track_id", how="left")
-
     print("Top artists çekiliyor...")
     artists = get_top_artists(sp, limit=20)
     artists_df = pd.DataFrame(artists)
 
+    # Tüm genre'ları topla ve ortalama feature hesapla
+    print("Genre'lardan audio özellikler tahmin ediliyor...")
+    all_genres = []
+    for row in artists:
+        all_genres.extend(row.get("genres", []))
+
+    estimated_features = _estimate_features_from_genres(all_genres)
+
+    # Her track'e aynı tahmin edilen feature'ları ekle
+    for col, val in estimated_features.items():
+        tracks_df[col] = val
+    tracks_df["instrumentalness"] = 0.1
+    tracks_df["speechiness"] = 0.1
+    tracks_df["loudness"] = -8.0
+
     return {
-        "tracks_df": merged_df,
+        "tracks_df": tracks_df,
         "artists_df": artists_df,
         "user_info": {
             "display_name": user_info.get("display_name", "Kullanıcı"),
             "user_id": user_info.get("id"),
             "country": user_info.get("country"),
         },
+        "all_genres": all_genres,
     }
