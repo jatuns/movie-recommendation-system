@@ -1,8 +1,8 @@
 """
 Phase 1: Spotify OAuth & Data Collection
-Kullanıcının top tracks, top artists verilerini çeker.
-Not: audio-features endpoint Spotify tarafından 2024'te kısıtlandı.
-Bunun yerine artist genres'den türetilmiş özellikler kullanılıyor.
+Fetches the user's top tracks and top artists.
+Note: the audio-features endpoint was restricted by Spotify in 2024.
+Audio features are estimated from artist genres instead.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ SCOPE = (
     "user-read-private"
 )
 
-# Genre → audio özellik tahmini (audio-features API yerine)
+# Genre → audio feature estimation (replaces audio-features API)
 GENRE_FEATURE_MAP = {
     "pop":              {"energy": 0.7, "valence": 0.7, "danceability": 0.7, "acousticness": 0.2, "tempo": 120},
     "rock":             {"energy": 0.8, "valence": 0.5, "danceability": 0.5, "acousticness": 0.1, "tempo": 130},
@@ -55,7 +55,7 @@ DEFAULT_FEATURES = {"energy": 0.5, "valence": 0.5, "danceability": 0.5, "acousti
 
 
 def _estimate_features_from_genres(genres: list[str]) -> dict:
-    """Artist genre listesinden audio feature tahmini yapar."""
+    """Estimates audio features from an artist's genre list."""
     matched = []
     for genre in genres:
         genre_lower = genre.lower()
@@ -140,28 +140,28 @@ def get_top_artists(sp: spotipy.Spotify, limit: int = 20) -> list[dict]:
 
 def collect_user_data(sp: spotipy.Spotify) -> dict:
     """
-    Top tracks + top artists çeker.
-    Audio features API kısıtlı olduğundan genre'dan tahmin edilir.
+    Fetches top tracks + top artists.
+    Audio features are estimated from genres since the API is restricted.
     """
     user_info = sp.current_user()
 
-    print("Top tracks çekiliyor...")
+    print("Fetching top tracks...")
     tracks = get_top_tracks(sp, limit=50)
     tracks_df = pd.DataFrame(tracks)
 
-    print("Top artists çekiliyor...")
+    print("Fetching top artists...")
     artists = get_top_artists(sp, limit=20)
     artists_df = pd.DataFrame(artists)
 
-    # Tüm genre'ları topla ve ortalama feature hesapla
-    print("Genre'lardan audio özellikler tahmin ediliyor...")
+    # Collect all genres and estimate average features
+    print("Estimating audio features from genres...")
     all_genres = []
     for row in artists:
         all_genres.extend(row.get("genres", []))
 
     estimated_features = _estimate_features_from_genres(all_genres)
 
-    # Her track'e aynı tahmin edilen feature'ları ekle
+    # Apply estimated features to all tracks
     for col, val in estimated_features.items():
         tracks_df[col] = val
     tracks_df["instrumentalness"] = 0.1
@@ -172,7 +172,7 @@ def collect_user_data(sp: spotipy.Spotify) -> dict:
         "tracks_df": tracks_df,
         "artists_df": artists_df,
         "user_info": {
-            "display_name": user_info.get("display_name", "Kullanıcı"),
+            "display_name": user_info.get("display_name", "User"),
             "user_id": user_info.get("id"),
             "country": user_info.get("country"),
         },

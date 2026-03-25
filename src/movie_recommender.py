@@ -1,7 +1,7 @@
 """
 Phase 4: Movie Recommendation Engine
-TMDB API'dan film verisi çeker, Sentence Transformers ile embedding oluşturur,
-cosine similarity ile kişilik profiline en uygun 10 filmi önerir.
+Fetches movie data from TMDB API, builds embeddings with Sentence Transformers,
+and recommends the top 10 movies via cosine similarity with the personality profile.
 """
 
 from __future__ import annotations
@@ -20,11 +20,11 @@ TMDB_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 CACHE_PATH = "data/movies_cache.json"
 EMBEDDINGS_PATH = "data/movie_embeddings.npy"
-MODEL_NAME = "all-MiniLM-L6-v2"  # Hızlı ve etkili sentence embedding modeli
+MODEL_NAME = "all-MiniLM-L6-v2"  # Fast and effective sentence embedding model
 
 
 def _tmdb_get(endpoint: str, params: dict = None) -> dict:
-    """TMDB API isteği yapar."""
+    """Makes a TMDB API request."""
     api_key = os.getenv("TMDB_API_KEY")
     base_params = {"api_key": api_key, "language": "en-US"}
     if params:
@@ -36,23 +36,23 @@ def _tmdb_get(endpoint: str, params: dict = None) -> dict:
 
 def fetch_movies(total: int = 5000) -> list[dict]:
     """
-    TMDB popular movies endpoint'inden film listesi çeker.
-    Her sayfada 20 film var, toplam total / 20 sayfa çekiliriz.
+    Fetches a movie list from the TMDB popular movies endpoint.
+    20 movies per page, fetching total / 20 pages.
     """
     os.makedirs("data", exist_ok=True)
 
     if os.path.exists(CACHE_PATH):
-        print("Film verisi cache'den yükleniyor...")
+        print("Loading movies from cache...")
         with open(CACHE_PATH) as f:
             return json.load(f)
 
-    print(f"TMDB'den {total} film çekiliyor...")
+    print(f"Fetching {total} movies from TMDB...")
     movies = []
     pages = total // 20
 
     for page in range(1, pages + 1):
         if page % 50 == 0:
-            print(f"  Sayfa {page}/{pages}")
+            print(f"  Page {page}/{pages}")
         try:
             data = _tmdb_get("/discover/movie", {
                 "page": page,
@@ -67,7 +67,7 @@ def fetch_movies(total: int = 5000) -> list[dict]:
                     "movie_id": m["id"],
                     "title": m["title"],
                     "overview": m["overview"],
-                    "genres": [],  # genre_ids, isimler sonradan doldurulacak
+                    "genres": [],  # genre names filled in below
                     "genre_ids": m.get("genre_ids", []),
                     "release_year": (m.get("release_date") or "")[:4],
                     "poster_path": m.get("poster_path"),
@@ -75,10 +75,10 @@ def fetch_movies(total: int = 5000) -> list[dict]:
                     "popularity": m.get("popularity", 0),
                 })
         except Exception as e:
-            print(f"  Sayfa {page} hata: {e}")
+            print(f"  Page {page} error: {e}")
             continue
 
-    # Genre isimlerini ekle
+    # Add genre names
     genre_map = _get_genre_map()
     for m in movies:
         m["genres"] = [genre_map.get(gid, "") for gid in m["genre_ids"] if gid in genre_map]
@@ -86,38 +86,38 @@ def fetch_movies(total: int = 5000) -> list[dict]:
     with open(CACHE_PATH, "w") as f:
         json.dump(movies, f, ensure_ascii=False)
 
-    print(f"{len(movies)} film kaydedildi.")
+    print(f"Saved {len(movies)} movies.")
     return movies
 
 
 def _get_genre_map() -> dict:
-    """TMDB genre id → isim eşlemesi."""
+    """TMDB genre id → name mapping."""
     data = _tmdb_get("/genre/movie/list")
     return {g["id"]: g["name"] for g in data.get("genres", [])}
 
 
 def _build_movie_text(movie: dict) -> str:
-    """Film için embedding'e girecek zengin metin oluşturur."""
+    """Builds a rich text string for a movie to embed."""
     genres = " ".join(movie.get("genres", []))
     return f"{movie['title']}. {genres}. {movie['overview']}"
 
 
 def load_or_build_embeddings(movies: list[dict]) -> np.ndarray:
-    """Film embeddings'lerini cache'den yükler veya yeniden oluşturur."""
+    """Loads movie embeddings from cache or builds them fresh."""
     if os.path.exists(EMBEDDINGS_PATH):
-        print("Embeddings cache'den yükleniyor...")
+        print("Loading embeddings from cache...")
         return np.load(EMBEDDINGS_PATH)
 
-    print("Sentence Transformer modeli yükleniyor...")
+    print("Loading Sentence Transformer model...")
     model = SentenceTransformer(MODEL_NAME)
 
     texts = [_build_movie_text(m) for m in movies]
-    print(f"{len(texts)} film için embedding oluşturuluyor...")
+    print(f"Building embeddings for {len(texts)} movies...")
     embeddings = model.encode(texts, batch_size=64, show_progress_bar=True)
 
     os.makedirs("data", exist_ok=True)
     np.save(EMBEDDINGS_PATH, embeddings)
-    print("Embeddings kaydedildi.")
+    print("Embeddings saved.")
     return embeddings
 
 
@@ -128,8 +128,8 @@ def recommend_movies(
     top_n: int = 10,
 ) -> list[dict]:
     """
-    Kişilik profilinin mood_description'ını embedding'e dönüştürür,
-    cosine similarity ile top_n film önerir.
+    Embeds the personality profile's mood description and recommends
+    top_n movies via cosine similarity.
     """
     model = SentenceTransformer(MODEL_NAME)
     query_embedding = model.encode([mood_description])

@@ -1,8 +1,8 @@
 """
 Phase 2: NLP Feature Engineering
-Şarkı sözlerinden duygu analizi yapar, audio features ile birleştirir.
+Performs emotion analysis from lyrics and combines with audio features.
 Model: j-hartmann/emotion-english-distilroberta-base
-Duygular: joy, sadness, anger, fear, surprise, disgust, neutral
+Emotions: joy, sadness, anger, fear, surprise, disgust, neutral
 """
 
 from __future__ import annotations
@@ -29,11 +29,11 @@ def get_genius_client() -> lyricsgenius.Genius:
 
 
 def fetch_lyrics(genius: lyricsgenius.Genius, track_name: str, artist_name: str) -> str | None:
-    """Bir şarkının sözlerini Genius API'dan çeker."""
+    """Fetches lyrics for a single track from the Genius API."""
     try:
         song = genius.search_song(track_name, artist_name)
         if song and song.lyrics:
-            # İlk 1000 karakter yeterli (model token limiti)
+            # First 1000 chars are sufficient (model token limit)
             return song.lyrics[:1000]
     except Exception:
         pass
@@ -42,8 +42,8 @@ def fetch_lyrics(genius: lyricsgenius.Genius, track_name: str, artist_name: str)
 
 def fetch_lyrics_for_tracks(tracks_df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
     """
-    Top N track için lyrics çeker.
-    Zaman aşımı sorunlarını önlemek için request'ler arasında kısa bekleme.
+    Fetches lyrics for the top N tracks.
+    Short delay between requests to avoid rate limiting.
     """
     genius = get_genius_client()
     df = tracks_df.head(top_n).copy()
@@ -53,33 +53,33 @@ def fetch_lyrics_for_tracks(tracks_df: pd.DataFrame, top_n: int = 20) -> pd.Data
         print(f"  Lyrics: {row['track_name']} - {row['artist_name']}")
         lyrics = fetch_lyrics(genius, row["track_name"], row["artist_name"])
         lyrics_list.append(lyrics)
-        time.sleep(0.5)  # Rate limit önlemi
+        time.sleep(0.5)  # Rate limit guard
 
     df["lyrics"] = lyrics_list
     return df
 
 
 def load_emotion_model():
-    """HuggingFace duygu analizi modelini yükler."""
-    print("Duygu analizi modeli yükleniyor (ilk seferde biraz zaman alabilir)...")
+    """Loads the HuggingFace emotion analysis model."""
+    print("Loading emotion model (may take a moment on first run)...")
     return pipeline(
         "text-classification",
         model="j-hartmann/emotion-english-distilroberta-base",
-        top_k=None,  # Tüm duygu skorlarını döndür
+        top_k=None,  # Return all emotion scores
         device=-1,   # CPU
     )
 
 
 def analyze_emotions(classifier, text: str) -> dict:
-    """Bir metin için 7 duygu skoru döndürür (toplamları 1.0)."""
+    """Returns 7 emotion scores for a text (sum to 1.0)."""
     if not text or len(text.strip()) < 20:
-        # Boş lyrics için nötr varsayılan
+        # Default to neutral for empty lyrics
         return {e: (1.0 if e == "neutral" else 0.0) for e in EMOTIONS}
 
     try:
-        results = classifier(text[:512])[0]  # Model max 512 token
+        results = classifier(text[:512])[0]  # Model max 512 tokens
         scores = {r["label"].lower(): r["score"] for r in results}
-        # Eksik duyguları 0 ile doldur
+        # Fill missing emotions with 0
         return {e: scores.get(e, 0.0) for e in EMOTIONS}
     except Exception:
         return {e: (1.0 if e == "neutral" else 0.0) for e in EMOTIONS}
@@ -87,13 +87,13 @@ def analyze_emotions(classifier, text: str) -> dict:
 
 def compute_emotion_profile(tracks_with_lyrics: pd.DataFrame) -> dict:
     """
-    Tüm şarkıların duygu skorlarının ortalamasını alır.
-    Returns: {"joy": 0.3, "sadness": 0.4, ...} şeklinde kullanıcı duygu profili
+    Averages emotion scores across all tracks.
+    Returns: {"joy": 0.3, "sadness": 0.4, ...} as the user's emotion profile
     """
     classifier = load_emotion_model()
     emotion_records = []
 
-    print("Şarkı sözleri analiz ediliyor...")
+    print("Analyzing lyrics...")
     for _, row in tracks_with_lyrics.iterrows():
         scores = analyze_emotions(classifier, row.get("lyrics"))
         emotion_records.append(scores)
@@ -104,10 +104,9 @@ def compute_emotion_profile(tracks_with_lyrics: pd.DataFrame) -> dict:
 
 def build_user_feature_vector(tracks_df: pd.DataFrame, emotion_profile: dict) -> np.ndarray:
     """
-    Audio features ortalaması + emotion scores'u birleştirerek
-    tek bir feature vektörü oluşturur.
+    Combines averaged audio features with emotion scores into a single feature vector.
 
-    Feature sırası:
+    Feature order:
     [energy, valence, tempo_norm, danceability, acousticness,
      instrumentalness, speechiness, joy, sadness, anger, fear, surprise, disgust]
     """
@@ -116,7 +115,7 @@ def build_user_feature_vector(tracks_df: pd.DataFrame, emotion_profile: dict) ->
 
     audio_means = tracks_df[audio_cols].mean().to_dict()
 
-    # Tempo'yu 0-1 arasına normalize et (tipik aralık 60-200 BPM)
+    # Normalize tempo to 0-1 (typical range: 60-200 BPM)
     tempo_norm = (tracks_df["tempo"].mean() - 60) / 140
     tempo_norm = float(np.clip(tempo_norm, 0, 1))
 

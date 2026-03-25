@@ -1,7 +1,7 @@
 """
 Phase 5: LLM Integration
-Her film önerisi için kişiselleştirilmiş açıklama üretir.
-Groq API kullanır (ücretsiz, Llama 3 modeli).
+Generates personalized explanations for each movie recommendation.
+Uses the Groq API (free tier, Llama 3 model).
 """
 
 import os
@@ -75,14 +75,14 @@ def explain_all_recommendations(
 ) -> list:
     results = []
     for i, movie in enumerate(movies):
-        print(f"  [{i+1}/{len(movies)}] {movie['title']} için açıklama üretiliyor...")
+        print(f"  [{i+1}/{len(movies)}] Generating explanation for {movie['title']}...")
         try:
             explanation = explain_recommendation(
                 personality_profile, emotion_profile, movie, top_artists
             )
         except Exception as e:
             explanation = f"Your {personality_profile['name']} personality makes this film a compelling watch — it echoes the emotional depth found in your music."
-            print(f"  Hata: {e}")
+            print(f"  Error: {e}")
 
         movie_with_explanation = movie.copy()
         movie_with_explanation["claude_explanation"] = explanation

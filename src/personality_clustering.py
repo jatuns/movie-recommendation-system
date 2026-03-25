@@ -1,6 +1,6 @@
 """
 Phase 3: Personality Clustering
-K-Means (k=6) ile kullanıcı feature vektörünü bir kişilik profiline atar.
+Assigns the user's feature vector to a personality profile using K-Means (k=6).
 """
 
 import numpy as np
@@ -10,14 +10,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-# 6 kişilik profili tanımı
+# 6 personality profile definitions
 PERSONALITY_PROFILES = {
     0: {
         "name": "Dark & Introspective",
         "emoji": "🖤",
         "description": (
-            "Melankoli ve içe dönüklük seni tanımlıyor. Duygusal derinlik, "
-            "sessizlik ve karmaşık temalar müziğinin özünde."
+            "Melancholy and introspection define you. Emotional depth, "
+            "silence, and complex themes are at the core of your music."
         ),
         "mood_description": (
             "dark melancholic introspective emotional depth isolation sadness "
@@ -29,8 +29,8 @@ PERSONALITY_PROFILES = {
         "name": "Energetic & Bold",
         "emoji": "⚡",
         "description": (
-            "Yüksek enerji ve cesaret seni tanımlıyor. Güçlü ritimler, "
-            "sürükleyici tempolar ve kararlı bir ruh hali."
+            "High energy and boldness define you. Powerful rhythms, "
+            "driving tempos, and a fearless attitude."
         ),
         "mood_description": (
             "action adventure energetic bold intense thrilling powerful "
@@ -42,8 +42,8 @@ PERSONALITY_PROFILES = {
         "name": "Feel-good & Social",
         "emoji": "☀️",
         "description": (
-            "Neşe ve sosyallik seni tanımlıyor. Pozitif titreşimler, "
-            "dans ritimleri ve hayata dolu dolu sarılmak."
+            "Joy and social energy define you. Positive vibes, "
+            "dance rhythms, and embracing life to the fullest."
         ),
         "mood_description": (
             "feel-good comedy uplifting joyful friendship social warm "
@@ -55,8 +55,8 @@ PERSONALITY_PROFILES = {
         "name": "Moody & Atmospheric",
         "emoji": "🌙",
         "description": (
-            "Atmosferik ve ruh hali değişken. Enstrümantal derinlik, "
-            "sinematik genişlik ve gizemli köşeler."
+            "Atmospheric and mood-shifting. Instrumental depth, "
+            "cinematic scope, and mysterious corners."
         ),
         "mood_description": (
             "moody atmospheric mysterious cinematic ambient ethereal "
@@ -68,8 +68,8 @@ PERSONALITY_PROFILES = {
         "name": "Sophisticated & Complex",
         "emoji": "🎭",
         "description": (
-            "Karmaşıklık ve zariflik seni tanımlıyor. Çok katmanlı anlatılar, "
-            "entelektüel derinlik ve sanatsal incelik."
+            "Complexity and elegance define you. Multi-layered narratives, "
+            "intellectual depth, and artistic refinement."
         ),
         "mood_description": (
             "sophisticated complex drama intellectual artistic character-driven "
@@ -81,8 +81,8 @@ PERSONALITY_PROFILES = {
         "name": "Calm & Reflective",
         "emoji": "🌿",
         "description": (
-            "Dinginlik ve yansıma seni tanımlıyor. Yavaş tempo, "
-            "doğa sevgisi ve derin bir iç huzur arayışı."
+            "Calm and reflection define you. Slow tempos, "
+            "a love of nature, and a deep search for inner peace."
         ),
         "mood_description": (
             "calm peaceful reflective slow-paced nature spiritual meditative "
@@ -98,8 +98,8 @@ SCALER_PATH = "models/scaler.pkl"
 
 def _load_or_create_model() -> tuple:
     """
-    Kaydedilmiş model varsa yükler, yoksa örnek verilerle yeni model oluşturur.
-    Gerçek kullanımda model daha büyük bir veri seti ile eğitilmelidir.
+    Loads a saved model if available, otherwise creates a new one with synthetic data.
+    In production, the model should be trained on a larger real dataset.
     """
     os.makedirs("models", exist_ok=True)
 
@@ -110,10 +110,10 @@ def _load_or_create_model() -> tuple:
             scaler = pickle.load(f)
         return kmeans, scaler
 
-    # Her profil için temsili sentetik merkez noktalar oluştur
-    # Özellik sırası: energy, valence, tempo, danceability, acousticness,
-    #                 instrumentalness, speechiness, joy, sadness, anger,
-    #                 fear, surprise, disgust
+    # Build representative synthetic centroids for each profile
+    # Feature order: energy, valence, tempo, danceability, acousticness,
+    #                instrumentalness, speechiness, joy, sadness, anger,
+    #                fear, surprise, disgust
     centroids = np.array([
         # 0: Dark & Introspective
         [0.3, 0.2, 0.3, 0.3, 0.7, 0.3, 0.1, 0.1, 0.6, 0.1, 0.2, 0.05, 0.1],
@@ -129,7 +129,7 @@ def _load_or_create_model() -> tuple:
         [0.2, 0.5, 0.2, 0.3, 0.8, 0.4, 0.05, 0.3, 0.2, 0.05, 0.05, 0.05, 0.05],
     ])
 
-    # Sentetik eğitim verisi: her centroid etrafında 50 nokta
+    # Synthetic training data: 50 points around each centroid
     np.random.seed(42)
     X_train = np.vstack([
         centroids[i] + np.random.normal(0, 0.08, (50, 13))
@@ -153,8 +153,8 @@ def _load_or_create_model() -> tuple:
 
 def assign_personality(feature_vector: np.ndarray) -> dict:
     """
-    Kullanıcının feature vektörüne göre kişilik profili atar.
-    Returns: profil bilgisi + cluster_id + distances
+    Assigns a personality profile based on the user's feature vector.
+    Returns: profile info + cluster_id + distances
     """
     kmeans, scaler = _load_or_create_model()
 
@@ -163,7 +163,7 @@ def assign_personality(feature_vector: np.ndarray) -> dict:
 
     cluster_id = int(kmeans.predict(vector_scaled)[0])
 
-    # Tüm merkezlere uzaklık (0-1 normalize, en yakın = en yüksek uyum)
+    # Distance to all centroids (0-1 normalized, closest = highest match)
     distances = kmeans.transform(vector_scaled)[0]
     max_dist = distances.max()
     similarities = 1 - (distances / (max_dist + 1e-9))
@@ -181,12 +181,12 @@ def assign_personality(feature_vector: np.ndarray) -> dict:
 
 def get_pca_coordinates(feature_vector: np.ndarray) -> dict:
     """
-    Kullanıcıyı PCA uzayında konumlandırır (görselleştirme için).
+    Positions the user in PCA space (for visualization).
     Returns: {"user_x": float, "user_y": float, "centroid_coords": list}
     """
     kmeans, scaler = _load_or_create_model()
 
-    # Merkez noktaları PCA ile 2D'ye indir
+    # Reduce centroids to 2D with PCA
     centers_scaled = kmeans.cluster_centers_
     pca = PCA(n_components=2, random_state=42)
     pca.fit(centers_scaled)
