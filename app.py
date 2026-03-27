@@ -548,24 +548,27 @@ def render_sidebar():
 def page_home():
     auth_url = get_auth_url()
 
+    # ── Nav ───────────────────────────────────────────────────────────────────
     st.markdown(f"""
-    <div style="max-width:1000px;margin:0 auto;padding:0 1rem;">
-
-      <!-- NAV -->
-      <div class="lp-nav fade-up">
-        <div class="lp-logo">music<span>match</span></div>
-        <div class="lp-nav-links">
-          <a>How it works</a>
-          <a>Technology</a>
-          <a>Open source</a>
-        </div>
-        <a href="{auth_url}" class="btn-cta" target="_self" style="padding:0.55rem 1.3rem;font-size:0.82rem;">
-          Connect Spotify
-        </a>
+    <div class="lp-nav fade-up">
+      <div class="lp-logo">music<span>match</span></div>
+      <div class="lp-nav-links">
+        <a>How it works</a>
+        <a>Technology</a>
+        <a>Open source</a>
       </div>
+      <a href="{auth_url}" class="btn-cta" target="_self" style="padding:0.55rem 1.3rem;font-size:0.82rem;">
+        Connect Spotify
+      </a>
+    </div>
+    <div style="height:3.5rem"></div>
+    """, unsafe_allow_html=True)
 
-      <!-- HERO -->
-      <div class="hero-wrap">
+    # ── Hero 2-col ────────────────────────────────────────────────────────────
+    col_text, col_mockup = st.columns([1.05, 1], gap="large")
+
+    with col_text:
+        st.markdown(f"""
         <div class="fade-up">
           <div class="hero-badge">
             <span class="badge-pulse"></span>
@@ -580,13 +583,15 @@ def page_home():
             🎵 &nbsp; Connect with Spotify
           </a>
           <div class="hero-trust">
-            <span class="trust-dot">✦</span> Read-only access
-            <span class="trust-dot">✦</span> Nothing stored
+            <span class="trust-dot">✦</span> Read-only access &nbsp;
+            <span class="trust-dot">✦</span> Nothing stored &nbsp;
             <span class="trust-dot">✦</span> Free forever
           </div>
         </div>
+        """, unsafe_allow_html=True)
 
-        <!-- APP MOCKUP -->
+    with col_mockup:
+        st.markdown("""
         <div class="mockup-wrap fade-up-d1">
           <div class="mockup-bar">
             <span class="m-dot m-dot-r"></span>
@@ -608,8 +613,8 @@ def page_home():
                 <div>
                   <div class="mock-title">Blade Runner 2049</div>
                   <div class="mock-meta">
-                    <span class="mock-star">★ 8.0</span>
-                    &nbsp;·&nbsp;
+                    <span class="mock-star">&#9733; 8.0</span>
+                    &nbsp;&middot;&nbsp;
                     <span class="mock-coral">97% match</span>
                   </div>
                 </div>
@@ -619,8 +624,8 @@ def page_home():
                 <div>
                   <div class="mock-title">The Grand Budapest Hotel</div>
                   <div class="mock-meta">
-                    <span class="mock-star">★ 8.1</span>
-                    &nbsp;·&nbsp;
+                    <span class="mock-star">&#9733; 8.1</span>
+                    &nbsp;&middot;&nbsp;
                     <span class="mock-coral">94% match</span>
                   </div>
                 </div>
@@ -628,10 +633,10 @@ def page_home():
               <div class="mock-movie">
                 <div class="mock-poster" style="background:linear-gradient(135deg,#1a2e1a,#1a4a2e)"></div>
                 <div>
-                  <div class="mock-title">Everything Everywhere</div>
+                  <div class="mock-title">Everything Everywhere All at Once</div>
                   <div class="mock-meta">
-                    <span class="mock-star">★ 7.8</span>
-                    &nbsp;·&nbsp;
+                    <span class="mock-star">&#9733; 7.8</span>
+                    &nbsp;&middot;&nbsp;
                     <span class="mock-coral">91% match</span>
                   </div>
                 </div>
@@ -639,49 +644,40 @@ def page_home():
             </div>
           </div>
         </div>
-      </div>
+        """, unsafe_allow_html=True)
 
-      <!-- FEATURE GRID -->
-      <div class="feat-section fade-up-d2">
-        <div class="feat-section-label">How it works</div>
-        <div class="feat-section-title">Five steps, one <em>perfect</em> watchlist.</div>
-        <div class="feat-grid">
-          <div class="feat-card">
-            <div class="feat-icon-box" style="background:rgba(29,185,84,0.12)">🎧</div>
-            <div class="feat-card-title">Spotify Data</div>
-            <div class="feat-card-desc">Your top 50 tracks and 20 artists are fetched via read-only OAuth — nothing is stored.</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon-box" style="background:rgba(255,107,107,0.12)">📝</div>
-            <div class="feat-card-title">Lyrics Analysis</div>
-            <div class="feat-card-desc">Genius API grabs lyrics. HuggingFace DistilRoBERTa extracts joy, sadness, anger and 4 more emotions.</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon-box" style="background:rgba(78,205,196,0.12)">🧠</div>
-            <div class="feat-card-title">Personality Cluster</div>
-            <div class="feat-card-desc">K-Means assigns you to one of 6 music personalities — from Dark &amp; Introspective to Feel-good &amp; Social.</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon-box" style="background:rgba(255,230,109,0.12)">🎬</div>
-            <div class="feat-card-title">Movie Matching</div>
-            <div class="feat-card-desc">Sentence Transformers embed your personality and 5,000+ TMDB films. Cosine similarity finds your top 10.</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon-box" style="background:rgba(29,185,84,0.12)">✨</div>
-            <div class="feat-card-title">AI Explanations</div>
-            <div class="feat-card-desc">Groq (Llama 3) writes a 2-3 sentence personal reason for every recommendation — for free.</div>
-          </div>
-          <div class="feat-card">
-            <div class="feat-icon-box" style="background:rgba(255,107,107,0.12)">📚</div>
-            <div class="feat-card-title">Session History</div>
-            <div class="feat-card-desc">Every session is saved locally. Come back anytime to revisit your past personality profiles and movie picks.</div>
-          </div>
-        </div>
-      </div>
+    # ── Feature grid ──────────────────────────────────────────────────────────
+    st.markdown("<div style='height:3rem'></div>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color:var(--border);margin:0 0 2.5rem'>", unsafe_allow_html=True)
 
-      <div class="footer">musicmatch · Streamlit · Spotify · HuggingFace · Groq · TMDB</div>
-    </div>
+    st.markdown("""
+    <div class="feat-section-label">How it works</div>
+    <div class="feat-section-title">Five steps, one <em>perfect</em> watchlist.</div>
     """, unsafe_allow_html=True)
+
+    features = [
+        ("🎧", "rgba(29,185,84,0.12)",   "Spotify Data",        "Your top 50 tracks and 20 artists are fetched via read-only OAuth — nothing is stored."),
+        ("📝", "rgba(255,107,107,0.12)", "Lyrics Analysis",     "Genius API grabs lyrics. HuggingFace DistilRoBERTa extracts joy, sadness, anger and 4 more emotions."),
+        ("🧠", "rgba(78,205,196,0.12)",  "Personality Cluster", "K-Means assigns you to one of 6 music personalities — from Dark & Introspective to Feel-good & Social."),
+        ("🎬", "rgba(255,230,109,0.12)", "Movie Matching",      "Sentence Transformers embed your personality and 5,000+ TMDB films. Cosine similarity finds your top 10."),
+        ("✨", "rgba(29,185,84,0.12)",   "AI Explanations",     "Groq (Llama 3) writes a 2–3 sentence personal reason for every recommendation — for free."),
+        ("📚", "rgba(255,107,107,0.12)", "Session History",     "Every session is saved locally. Come back anytime to revisit past personality profiles and movie picks."),
+    ]
+
+    row1 = st.columns(3, gap="small")
+    row2 = st.columns(3, gap="small")
+    for i, (icon, bg, title, desc) in enumerate(features):
+        col = (row1 if i < 3 else row2)[i % 3]
+        with col:
+            st.markdown(f"""
+            <div class="feat-card">
+              <div class="feat-icon-box" style="background:{bg}">{icon}</div>
+              <div class="feat-card-title">{title}</div>
+              <div class="feat-card-desc">{desc}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown('<div class="footer">musicmatch · Streamlit · Spotify · HuggingFace · Groq · TMDB</div>', unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
