@@ -364,11 +364,11 @@
         const anchor = Math.abs(cos) < 0.15 ? 'middle' : cos > 0 ? 'start' : 'end';
         const pct = Math.round(vals[i]*100);
         return `
-          <text x="${lx}" y="${(ly-1).toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle"
-                font-family="Plus Jakarta Sans,sans-serif" font-size="3.4" font-weight="700"
+          <text x="${lx}" y="${(ly-2).toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle"
+                font-family="Plus Jakarta Sans,sans-serif" font-size="5.5" font-weight="700"
                 fill="${audioMetrics[i].color}">${audioMetrics[i].label}</text>
-          <text x="${lx}" y="${(ly+4).toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle"
-                font-family="Plus Jakarta Sans,sans-serif" font-size="3"
+          <text x="${lx}" y="${(ly+5.5).toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle"
+                font-family="Plus Jakarta Sans,sans-serif" font-size="5"
                 fill="rgba(234,234,234,0.5)">${pct}%</text>`;
       }).join('');
 
