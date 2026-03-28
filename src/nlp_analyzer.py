@@ -12,7 +12,10 @@ import time
 import lyricsgenius
 import pandas as pd
 import numpy as np
-from transformers import pipeline
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from transformers import pipeline, logging as transformers_logging
+
+transformers_logging.set_verbosity_error()
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -40,34 +43,46 @@ def fetch_lyrics(genius: lyricsgenius.Genius, track_name: str, artist_name: str)
     return None
 
 
-def fetch_lyrics_for_tracks(tracks_df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
+def fetch_lyrics_for_tracks(tracks_df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
     """
-    Fetches lyrics for the top N tracks.
-    Short delay between requests to avoid rate limiting.
+    Fetches lyrics for the top N tracks in parallel (up to 5 workers).
     """
     genius = get_genius_client()
     df = tracks_df.head(top_n).copy()
-    lyrics_list = []
+    rows = list(df.itertuples(index=True))
+    lyrics_map: dict[int, str | None] = {}
 
-    for _, row in df.iterrows():
-        print(f"  Lyrics: {row['track_name']} - {row['artist_name']}")
-        lyrics = fetch_lyrics(genius, row["track_name"], row["artist_name"])
-        lyrics_list.append(lyrics)
-        time.sleep(0.5)  # Rate limit guard
+    def _fetch(row):
+        print(f"  Lyrics: {row.track_name} - {row.artist_name}")
+        lyrics = fetch_lyrics(genius, row.track_name, row.artist_name)
+        time.sleep(0.2)  # minimal rate-limit guard per worker
+        return row.Index, lyrics
 
-    df["lyrics"] = lyrics_list
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(_fetch, row) for row in rows]
+        for future in as_completed(futures):
+            idx, lyrics = future.result()
+            lyrics_map[idx] = lyrics
+
+    df["lyrics"] = [lyrics_map[i] for i in df.index]
     return df
 
 
+_emotion_classifier = None
+
+
 def load_emotion_model():
-    """Loads the HuggingFace emotion analysis model."""
-    print("Loading emotion model (may take a moment on first run)...")
-    return pipeline(
-        "text-classification",
-        model="j-hartmann/emotion-english-distilroberta-base",
-        top_k=None,  # Return all emotion scores
-        device=-1,   # CPU
-    )
+    """Loads the HuggingFace emotion analysis model (cached after first load)."""
+    global _emotion_classifier
+    if _emotion_classifier is None:
+        print("Loading emotion model (may take a moment on first run)...")
+        _emotion_classifier = pipeline(
+            "text-classification",
+            model="j-hartmann/emotion-english-distilroberta-base",
+            top_k=None,  # Return all emotion scores
+            device=-1,   # CPU
+        )
+    return _emotion_classifier
 
 
 def analyze_emotions(classifier, text: str) -> dict:
@@ -87,16 +102,38 @@ def analyze_emotions(classifier, text: str) -> dict:
 
 def compute_emotion_profile(tracks_with_lyrics: pd.DataFrame) -> dict:
     """
-    Averages emotion scores across all tracks.
+    Averages emotion scores across all tracks using batch inference.
     Returns: {"joy": 0.3, "sadness": 0.4, ...} as the user's emotion profile
     """
     classifier = load_emotion_model()
-    emotion_records = []
-
     print("Analyzing lyrics...")
-    for _, row in tracks_with_lyrics.iterrows():
-        scores = analyze_emotions(classifier, row.get("lyrics"))
-        emotion_records.append(scores)
+
+    # Split tracks into those with usable lyrics vs those without
+    texts, no_lyric_indices, text_indices = [], [], []
+    for i, (_, row) in enumerate(tracks_with_lyrics.iterrows()):
+        lyrics = row.get("lyrics")
+        if lyrics and len(str(lyrics).strip()) >= 20:
+            texts.append(str(lyrics)[:512])
+            text_indices.append(i)
+        else:
+            no_lyric_indices.append(i)
+
+    neutral = {e: (1.0 if e == "neutral" else 0.0) for e in EMOTIONS}
+    emotion_records = [None] * len(tracks_with_lyrics)
+
+    # Batch inference for tracks with lyrics
+    if texts:
+        try:
+            batch_results = classifier(texts, batch_size=8)
+            for i, results in zip(text_indices, batch_results):
+                scores = {r["label"].lower(): r["score"] for r in results}
+                emotion_records[i] = {e: scores.get(e, 0.0) for e in EMOTIONS}
+        except Exception:
+            for i in text_indices:
+                emotion_records[i] = neutral
+
+    for i in no_lyric_indices:
+        emotion_records[i] = neutral
 
     emotion_df = pd.DataFrame(emotion_records)
     return emotion_df.mean().to_dict()

@@ -731,7 +731,7 @@ def page_analyze():
 
             if not st.session_state.emotion_profile:
                 update(25, "📝 Fetching lyrics via Genius API...")
-                tracks_with_lyrics = fetch_lyrics_for_tracks(user_data["tracks_df"], top_n=20)
+                tracks_with_lyrics = fetch_lyrics_for_tracks(user_data["tracks_df"], top_n=10)
                 update(45, "🧠 Running emotion analysis (HuggingFace)...")
                 emotion_profile = compute_emotion_profile(tracks_with_lyrics)
                 st.session_state.emotion_profile = emotion_profile
