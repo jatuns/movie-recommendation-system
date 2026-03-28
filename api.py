@@ -270,7 +270,8 @@ def callback(
     # Store extra user context in the session so the dashboard can read it
     user_info  = user_data["user_info"]
     tracks     = user_data["tracks_df"][["track_name", "artist_name"]].head(20).to_dict("records")
-    artists    = user_data["artists_df"][["artist_name", "genres"]].head(20).to_dict("records")
+    artist_cols = ["artist_name", "genres", "image_url"] if "image_url" in user_data["artists_df"].columns else ["artist_name", "genres"]
+    artists    = user_data["artists_df"][artist_cols].head(20).to_dict("records")
     _sessions[session_id]["_meta"] = {
         "user":        {"display_name": user_info["display_name"], "user_id": user_info["user_id"]},
         "top_tracks":  tracks,

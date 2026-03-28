@@ -281,11 +281,15 @@
         const chips = (a.genres || []).slice(0, 3).map(g =>
           `<span class="px-1.5 py-0.5 rounded-md bg-teal/10 border border-teal/20 text-teal text-xs">${escHtml(g)}</span>`
         ).join('');
+        const initial = escHtml((a.artist_name||'?').charAt(0).toUpperCase());
+        const avatar = a.image_url
+          ? `<img src="${escHtml(a.image_url)}" alt="${escHtml(a.artist_name)}"
+                  class="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                  onerror="this.outerHTML='<div class=\\'w-8 h-8 rounded-full bg-teal/15 flex items-center justify-center text-teal font-700 text-xs flex-shrink-0\\'>${initial}</div>'">`
+          : `<div class="w-8 h-8 rounded-full bg-teal/15 flex items-center justify-center text-teal font-700 text-xs flex-shrink-0">${initial}</div>`;
         return `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
           <span class="text-xs font-700 text-muted w-5 text-right">${i+1}</span>
-          <div class="w-8 h-8 rounded-full bg-teal/15 flex items-center justify-center text-teal font-700 text-xs flex-shrink-0">
-            ${escHtml((a.artist_name||'?').charAt(0).toUpperCase())}
-          </div>
+          ${avatar}
           <div class="flex-1 min-w-0">
             <p class="text-sm font-600 text-text truncate">${escHtml(a.artist_name || '')}</p>
             <div class="flex flex-wrap gap-1 mt-1">${chips}</div>
@@ -296,11 +300,14 @@
 
     function renderGenreCloud() {
       const el = document.getElementById('genre-cloud');
-      if (!genres.length) {
+      // Build source: prefer all_genres flat list; fallback to genres from artist objects
+      let source = genres.length ? genres
+        : artists.flatMap(a => a.genres || []);
+      if (!source.length) {
         el.innerHTML = `<p class="text-sm text-muted">No genre data available.</p>`; return;
       }
       const freq = {};
-      genres.forEach(g => { freq[g] = (freq[g] || 0) + 1; });
+      source.forEach(g => { freq[g] = (freq[g] || 0) + 1; });
       const sorted = Object.entries(freq).sort((a,b) => b[1]-a[1]);
       const maxFreq = sorted[0]?.[1] || 1;
       el.innerHTML = sorted.map(([g, cnt]) => {
@@ -419,6 +426,7 @@
           if (data.all_genres?.length)  { genres  = data.all_genres;  localStorage.setItem(LS.genres,  JSON.stringify(genres));  changed = true; }
           if (data.user?.display_name)  { user    = data.user;        localStorage.setItem(LS.user,    JSON.stringify(user));    changed = true; }
           if (changed) { renderHeader(); renderArtists(); renderGenreCloud(); renderTracks(); }
+          else if (data.top_artists?.length) renderGenreCloud(); // re-render genre cloud with artist genres as fallback
         })
         .catch(() => {});
 

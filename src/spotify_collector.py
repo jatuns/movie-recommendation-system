@@ -128,12 +128,16 @@ def get_top_artists(sp: spotipy.Spotify, limit: int = 20) -> list[dict]:
     results = sp.current_user_top_artists(limit=limit, time_range="medium_term")
     artists = []
     for item in results.get("items", []):
+        images = item.get("images", [])
+        # Prefer smallest image (last) for thumbnails, fallback to largest
+        image_url = images[-1]["url"] if images else None
         artists.append({
             "artist_id": item.get("id"),
             "artist_name": item.get("name"),
             "genres": item.get("genres", []),
             "genres_str": ", ".join(item.get("genres", [])[:3]),
             "popularity": item.get("popularity", 0),
+            "image_url": image_url,
         })
     return artists
 
