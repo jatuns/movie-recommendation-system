@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>musicmatch — Dashboard</title>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:       '#1A1A2E',
+            surface:  '#16213E',
+            surface2: '#0F3460',
+            green:    '#1DB954',
+            coral:    '#FF6B6B',
+            teal:     '#4ECDC4',
+            yellow:   '#FFE66D',
+            text:     '#EAEAEA',
+            muted:    '#6B7280',
+          },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { background-color: #1A1A2E; color: #EAEAEA; }
+    .progress-bar { transition: width 0.6s ease; }
+    .step-done { animation: fadeSlideIn 0.4s ease forwards; }
+    @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .sidebar-link { transition: all 0.15s; }
+    .sidebar-link:hover, .sidebar-link.active {
+      background: rgba(29,185,84,0.1);
+      color: #1DB954;
+      border-left-color: #1DB954;
+    }
+    .movie-card:hover { border-color: rgba(255,107,107,0.5); box-shadow: 0 0 24px rgba(255,107,107,0.12); }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       LOADING SCREEN
+  ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="loading-screen" class="min-h-screen flex flex-col items-center justify-center px-6">
+    <div class="w-full max-w-md flex flex-col items-center gap-8">
+
+      <!-- Logo -->
+      <a href="/" class="text-2xl font-800 tracking-tight">
+        music<em class="text-green not-italic">match</em>
+      </a>
+
+      <!-- Title -->
+      <div class="text-center">
+        <h1 class="text-3xl font-800 mb-2">Analyzing your music</h1>
+        <p class="text-muted">This takes about 30–60 seconds</p>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="w-full">
+        <div class="flex justify-between text-xs text-muted mb-2">
+          <span id="status-text">Starting up...</span>
+          <span id="pct-text">0%</span>
+        </div>
+        <div class="w-full h-2 bg-surface rounded-full overflow-hidden">
+          <div id="progress-bar" class="h-2 bg-green rounded-full progress-bar" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Completed steps -->
+      <div id="steps-container" class="w-full flex flex-col gap-2 min-h-[120px]"></div>
+
+      <!-- Error state (hidden) -->
+      <div id="error-state" class="hidden w-full text-center">
+        <div class="bg-coral/10 border border-coral/20 rounded-xl p-5">
+          <p class="text-coral font-600 mb-1">Analysis Failed</p>
+          <p id="error-msg" class="text-sm text-muted"></p>
+          <a href="/" class="inline-block mt-3 text-sm text-green hover:underline">Try again</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       RESULTS SCREEN (hidden until analysis complete)
+  ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="results-screen" class="hidden min-h-screen flex">
+
+    <!-- Sidebar -->
+    <aside id="sidebar"
+      class="fixed left-0 top-0 h-full w-64 bg-surface border-r border-white/5 flex flex-col z-40">
+    </aside>
+
+    <!-- Main content -->
+    <main class="ml-64 flex-1 min-h-screen">
+
+      <!-- Top bar -->
+      <header class="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-white/5 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl font-700">
+              Hey, <span id="header-name" class="text-green"></span> 👋
+            </h1>
+            <p class="text-sm text-muted">Here are your personalized movie recommendations</p>
+          </div>
+          <div id="personality-badge"
+            class="hidden px-3 py-1.5 rounded-full bg-green/10 border border-green/20 text-green text-sm font-600">
+          </div>
+        </div>
+      </header>
+
+      <div class="p-8">
+        <div class="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-8 items-start">
+
+          <!-- Left column -->
+          <div class="flex flex-col gap-6">
+
+            <!-- Personality card -->
+            <div id="personality-card"
+              class="rounded-2xl border border-green/20 p-6 flex flex-col gap-3"
+              style="background: linear-gradient(135deg, rgba(29,185,84,0.12) 0%, rgba(15,52,96,0.8) 100%)">
+              <div class="flex items-center gap-3">
+                <span id="p-emoji" class="text-4xl"></span>
+                <div>
+                  <p id="p-name" class="text-lg font-800 text-text"></p>
+                  <span id="p-confidence"
+                    class="text-xs font-600 text-green bg-green/15 px-2 py-0.5 rounded-full"></span>
+                </div>
+              </div>
+              <p id="p-desc" class="text-sm text-muted leading-relaxed"></p>
+            </div>
+
+            <!-- Emotion bars -->
+            <div class="bg-surface border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
+              <p class="text-xs font-700 uppercase tracking-widest text-muted">Emotion Profile</p>
+              <div id="emotion-bars" class="flex flex-col gap-3"></div>
+            </div>
+
+          </div>
+
+          <!-- Right column: movie grid -->
+          <div>
+            <div class="flex items-center justify-between mb-5">
+              <h2 class="text-lg font-700">Your Top Matches</h2>
+              <span class="text-xs text-muted">10 recommendations</span>
+            </div>
+            <div id="movie-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ── LocalStorage keys ──────────────────────────────────────────────────────
+    const LS = {
+      session:      'mmSessionId',
+      user:         'mmUser',
+      personality:  'mmPersonality',
+      recs:         'mmRecommendations',
+      emotions:     'mmEmotionProfile',
+      genres:       'mmAllGenres',
+      artists:      'mmArtists',
+      tracks:       'mmTracks',
+    };
+
+    // ── Sidebar renderer (shared) ──────────────────────────────────────────────
+    function renderSidebar(activePage) {
+      const user = JSON.parse(localStorage.getItem(LS.user) || '{}');
+      const name = user.display_name || 'Music Fan';
+      const sid  = localStorage.getItem(LS.session) || '';
+      const el   = document.getElementById('sidebar');
+      if (!el) return;
+      el.innerHTML = `
+        <div class="p-6 flex flex-col gap-6 flex-1 overflow-y-auto">
+          <a href="/" class="text-lg font-800 tracking-tight">
+            music<em class="text-green not-italic">match</em>
+          </a>
+          <div class="flex items-center gap-3 px-3 py-3 bg-bg/40 rounded-xl">
+            <div class="w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0">
+              ${name.charAt(0).toUpperCase()}
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-600 text-text truncate">${escHtml(name)}</p>
+              <p class="text-xs text-muted truncate">Spotify</p>
+            </div>
+          </div>
+          <nav class="flex flex-col gap-1">
+            <a href="/dashboard?session_id=${escHtml(sid)}"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='dashboard'?'active':''}">
+              <span>🏠</span> Dashboard
+            </a>
+            <a href="/profile.html?session_id=${escHtml(sid)}"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='profile'?'active':''}">
+              <span>👤</span> Profile
+            </a>
+            <a href="/history.html"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='history'?'active':''}">
+              <span>📚</span> History
+            </a>
+          </nav>
+          <div class="mt-auto pt-4 border-t border-white/5">
+            <button onclick="disconnect()"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-500 text-muted hover:text-coral hover:bg-coral/10 transition-colors">
+              <span>🚪</span> Disconnect
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function disconnect() {
+      Object.values(LS).forEach(k => localStorage.removeItem(k));
+      window.location.href = '/';
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    const params    = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id') || localStorage.getItem(LS.session);
+
+    if (!sessionId) {
+      window.location.href = '/';
+    } else {
+      localStorage.setItem(LS.session, sessionId);
+      runAnalysis();
+    }
+
+    // Step ordering for completed-steps display
+    const STEPS = ['lyrics','emotions','personality','movies','explanations','complete'];
+    const STEP_LABELS = {
+      lyrics:       'Lyrics fetched',
+      emotions:     'Emotions analyzed',
+      personality:  'Personality determined',
+      movies:       'Movies loaded',
+      explanations: 'AI explanations written',
+      complete:     'Analysis complete',
+    };
+    const completedSet = new Set();
+
+    async function runAnalysis() {
+      // Start pipeline
+      try {
+        await fetch(`/api/analyze?session_id=${sessionId}`, { method: 'POST' });
+      } catch(e) { /* ignore — status poll will reveal errors */ }
+
+      // Poll status
+      const interval = setInterval(async () => {
+        try {
+          const r   = await fetch(`/api/analyze/status?session_id=${sessionId}`);
+          const data = await r.json();
+          updateLoadingUI(data);
+
+          if (data.done) {
+            clearInterval(interval);
+            if (data.error) {
+              showError(data.error);
+            } else {
+              await loadResultsData();
+            }
+          }
+        } catch(e) {
+          // network blip — keep polling
+        }
+      }, 1500);
+    }
+
+    function updateLoadingUI({ step, pct, message }) {
+      document.getElementById('progress-bar').style.width = pct + '%';
+      document.getElementById('pct-text').textContent      = pct + '%';
+      document.getElementById('status-text').textContent   = message || step;
+
+      // Add completed step chips
+      const idx = STEPS.indexOf(step);
+      STEPS.slice(0, idx).forEach(s => {
+        if (!completedSet.has(s) && STEP_LABELS[s]) {
+          completedSet.add(s);
+          const chip = document.createElement('div');
+          chip.className = 'step-done flex items-center gap-2 text-sm text-muted';
+          chip.innerHTML = `<span class="text-green">✓</span> ${escHtml(STEP_LABELS[s])}`;
+          document.getElementById('steps-container').appendChild(chip);
+        }
+      });
+    }
+
+    function showError(msg) {
+      document.getElementById('error-state').classList.remove('hidden');
+      document.getElementById('error-msg').textContent = msg || 'Something went wrong.';
+    }
+
+    async function loadResultsData() {
+      try {
+        // Fetch recommendations + session meta
+        const [recRes, sessionRes] = await Promise.all([
+          fetch(`/api/recommendations?session_id=${sessionId}`),
+          fetch(`/api/session/${sessionId}`),
+        ]);
+        const recData     = await recRes.json();
+        const sessionData = await sessionRes.json();
+
+        // Persist to localStorage
+        const user = sessionData.user || {};
+        localStorage.setItem(LS.user,        JSON.stringify(user));
+        localStorage.setItem(LS.personality, JSON.stringify(recData.personality));
+        localStorage.setItem(LS.recs,        JSON.stringify(recData.recommendations));
+        localStorage.setItem(LS.genres,      JSON.stringify(sessionData.all_genres || []));
+        localStorage.setItem(LS.artists,     JSON.stringify(sessionData.top_artists || []));
+        localStorage.setItem(LS.tracks,      JSON.stringify(sessionData.top_tracks || []));
+
+        // Fetch emotion profile
+        try {
+          const profRes  = await fetch(`/api/profile?session_id=${sessionId}`);
+          const profData = await profRes.json();
+          localStorage.setItem(LS.emotions, JSON.stringify(profData.emotion_profile || {}));
+        } catch(e) { /* non-fatal */ }
+
+        showResults(recData, user);
+      } catch(e) {
+        showError('Failed to load results: ' + e.message);
+      }
+    }
+
+    function showResults(data, user) {
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.getElementById('results-screen').classList.remove('hidden');
+
+      renderSidebar('dashboard');
+
+      const p   = data.personality || {};
+      const name = user.display_name || 'Music Fan';
+
+      document.getElementById('header-name').textContent = name;
+
+      const badge = document.getElementById('personality-badge');
+      badge.textContent = `${p.emoji || ''} ${p.name || ''}`;
+      badge.classList.remove('hidden');
+
+      document.getElementById('p-emoji').textContent      = p.emoji || '🎵';
+      document.getElementById('p-name').textContent       = p.name  || '';
+      document.getElementById('p-desc').textContent       = p.description || '';
+      document.getElementById('p-confidence').textContent = `${Math.round((p.confidence || 0) * 100)}% match`;
+
+      // Emotion bars
+      const emotions = JSON.parse(localStorage.getItem(LS.emotions) || '{}');
+      renderEmotionBars(emotions);
+
+      // Movies
+      renderMovieGrid(data.recommendations || []);
+    }
+
+    function renderEmotionBars(emotions) {
+      const container = document.getElementById('emotion-bars');
+      const entries   = Object.entries(emotions).sort((a,b) => b[1] - a[1]).slice(0, 7);
+      container.innerHTML = entries.map(([label, val]) => {
+        const pct = Math.round(val * 100);
+        return `
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-text capitalize">${escHtml(label)}</span>
+              <span class="text-muted">${pct}%</span>
+            </div>
+            <div class="h-1.5 w-full bg-bg rounded-full overflow-hidden">
+              <div class="h-1.5 bg-green rounded-full transition-all duration-700"
+                   style="width:${pct}%"></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderMovieGrid(movies) {
+      const sid = localStorage.getItem(LS.session) || '';
+      const grid = document.getElementById('movie-grid');
+      grid.innerHTML = movies.map((m, i) => {
+        const pct    = Math.round((m.similarity_score || 0) * 100);
+        const genres = (m.genres || []).slice(0, 2).map(g =>
+          `<span class="px-2 py-0.5 rounded-full text-[10px] font-600 border"
+                style="background:rgba(255,107,107,0.12);color:#FF6B6B;border-color:rgba(255,107,107,0.25)">${escHtml(g)}</span>`
+        ).join('');
+
+        const posterImg = m.poster_url
+          ? `<img src="${escHtml(m.poster_url)}" alt="${escHtml(m.title)}"
+                  class="w-full h-full object-cover"
+                  onerror="this.parentElement.innerHTML='<span style=\\'font-size:2rem\\'>🎬</span>'">`
+          : `<span style="font-size:2rem">🎬</span>`;
+
+        return `
+          <div class="group bg-[#16213E] border border-white/5 rounded-xl overflow-hidden cursor-pointer
+                      transition-all duration-200 hover:border-[#FF6B6B] hover:shadow-[0_0_28px_rgba(255,107,107,0.15)]
+                      hover:-translate-y-1 flex flex-col"
+               onclick="window.location='/movie.html?session_id=${encodeURIComponent(sid)}&idx=${i}'">
+
+            <!-- Poster -->
+            <div class="relative w-full aspect-[2/3] flex items-center justify-center overflow-hidden"
+                 style="background:linear-gradient(135deg,${posterGradient(i)})">
+              ${posterImg}
+              <!-- Match badge overlay -->
+              <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-700"
+                   style="background:rgba(29,185,84,0.9);color:#000">🎯 ${pct}%</div>
+              <!-- Rank -->
+              <div class="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-700"
+                   style="background:rgba(0,0,0,0.6);color:#EAEAEA">${i+1}</div>
+            </div>
+
+            <!-- Info -->
+            <div class="p-3 flex flex-col gap-1.5 flex-1">
+              <h3 class="font-700 text-sm leading-tight line-clamp-2" style="color:#EAEAEA">${escHtml(m.title)}</h3>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="font-600" style="color:#FFE66D">★ ${(m.vote_average||0).toFixed(1)}</span>
+                <span style="color:#6B7280">${escHtml(String(m.release_year || ''))}</span>
+              </div>
+              <div class="flex flex-wrap gap-1">${genres}</div>
+              <div class="mt-auto pt-1.5 text-xs font-500 transition-colors group-hover:text-[#FF6B6B]"
+                   style="color:#6B7280">View details →</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    const GRADIENTS = [
+      '#1DB954, #0F3460', '#FF6B6B, #1A1A2E', '#4ECDC4, #16213E',
+      '#FFE66D, #0F3460', '#1DB954, #16213E', '#FF6B6B, #0F3460',
+      '#4ECDC4, #1A1A2E', '#FFE66D, #16213E', '#1DB954, #1A1A2E', '#FF6B6B, #16213E',
+    ];
+    function posterGradient(i) { return GRADIENTS[i % GRADIENTS.length]; }
+  </script>
+</body>
+</html>

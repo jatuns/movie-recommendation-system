@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>musicmatch — Your music, your movies.</title>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:       '#1A1A2E',
+            surface:  '#16213E',
+            surface2: '#0F3460',
+            green:    '#1DB954',
+            coral:    '#FF6B6B',
+            teal:     '#4ECDC4',
+            yellow:   '#FFE66D',
+            text:     '#EAEAEA',
+            muted:    '#6B7280',
+          },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%':      { transform: 'translateY(-14px)' },
+            },
+          },
+          animation: {
+            float: 'float 6s ease-in-out infinite',
+          },
+        },
+      },
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { background-color: #1A1A2E; color: #EAEAEA; }
+    .gradient-text { background: linear-gradient(135deg, #1DB954, #4ECDC4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-glow { background: radial-gradient(ellipse 60% 50% at 50% 60%, rgba(29,185,84,0.12) 0%, transparent 70%); }
+  </style>
+</head>
+<body class="font-sans antialiased">
+
+  <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
+  <nav class="sticky top-0 z-50 bg-bg/95 backdrop-blur border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="/" class="text-xl font-800 tracking-tight">
+        music<em class="text-green not-italic font-800">match</em>
+      </a>
+      <!-- Right nav -->
+      <div class="flex items-center gap-4">
+        <a href="https://github.com" target="_blank"
+           class="text-sm text-muted hover:text-text transition-colors hidden sm:block">
+          GitHub
+        </a>
+        <button onclick="connectSpotify()" id="nav-cta"
+          class="px-5 py-2 rounded-full bg-green text-bg text-sm font-600
+                 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(29,185,84,0.4)]
+                 transition-all duration-200 active:scale-95">
+          Connect Spotify
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+  <section class="relative overflow-hidden hero-glow">
+    <div class="max-w-6xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+      <!-- Left: copy -->
+      <div class="flex flex-col gap-6">
+        <!-- Badge pill -->
+        <div class="inline-flex items-center gap-2 w-fit px-3 py-1.5 rounded-full
+                    bg-green/10 border border-green/20 text-green text-xs font-500">
+          <span class="w-2 h-2 rounded-full bg-green animate-pulse"></span>
+          Powered by AI &nbsp;·&nbsp; Free &nbsp;·&nbsp; Open source
+        </div>
+
+        <!-- Headline -->
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-800 leading-[1.1] tracking-tight">
+          Your music,<br>
+          your <em class="text-green not-italic">movies.</em>
+        </h1>
+
+        <!-- Subtitle -->
+        <p class="text-muted text-lg leading-relaxed max-w-md">
+          Connect your Spotify. We analyze your taste, decode your emotions,
+          and match you with films you'll actually love — powered by AI.
+        </p>
+
+        <!-- CTA -->
+        <div class="flex flex-col gap-3">
+          <button onclick="connectSpotify()" id="cta-btn"
+            class="flex items-center justify-center gap-2.5 w-fit px-8 py-4 rounded-full
+                   text-[#0a0a0a] text-base font-700
+                   hover:-translate-y-1 hover:shadow-[0_8px_40px_rgba(29,185,84,0.5)] hover:brightness-110
+                   transition-all duration-200 active:scale-95 disabled:opacity-60"
+            style="background:#1DB954">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+            </svg>
+            Connect with Spotify
+          </button>
+          <!-- Trust row -->
+          <p class="text-xs text-muted flex items-center gap-3">
+            <span>✦ Read-only access</span>
+            <span>✦ Nothing stored</span>
+            <span>✦ Free forever</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Right: App mockup -->
+      <div class="hidden lg:block animate-float">
+        <div class="bg-surface rounded-2xl border border-white/8 shadow-2xl overflow-hidden">
+          <!-- Browser bar -->
+          <div class="flex items-center gap-3 px-4 py-3 bg-bg/60 border-b border-white/5">
+            <div class="flex gap-1.5">
+              <div class="w-3 h-3 rounded-full bg-coral/70"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow/70"></div>
+              <div class="w-3 h-3 rounded-full bg-green/70"></div>
+            </div>
+            <div class="flex-1 text-center">
+              <span class="text-xs text-muted font-mono bg-bg/60 px-3 py-1 rounded-md">
+                musicmatch.app/dashboard
+              </span>
+            </div>
+          </div>
+          <!-- Mockup content -->
+          <div class="p-5 flex flex-col gap-4">
+            <!-- Personality card -->
+            <div class="bg-green/10 border border-green/20 rounded-xl p-4 flex items-center gap-3">
+              <span class="text-3xl">🎭</span>
+              <div>
+                <p class="text-sm font-700 text-text">Sophisticated &amp; Complex</p>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <div class="h-1.5 w-24 rounded-full bg-bg">
+                    <div class="h-1.5 rounded-full bg-green" style="width:94%"></div>
+                  </div>
+                  <span class="text-xs text-green font-600">94% match</span>
+                </div>
+              </div>
+            </div>
+            <!-- Movie rows -->
+            <div class="flex flex-col gap-2">
+              <p class="text-xs text-muted font-600 uppercase tracking-wider">Top Matches</p>
+              <!-- Movie 1 -->
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-bg/50 border border-white/5">
+                <div class="w-10 h-14 rounded-md flex-shrink-0"
+                     style="background: linear-gradient(135deg, #1DB954, #0F3460)"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-600 text-text truncate">Blade Runner 2049</p>
+                  <p class="text-xs text-muted">2017 · Sci-Fi</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-yellow font-600">★ 8.0</p>
+                  <p class="text-xs text-green font-600">97%</p>
+                </div>
+              </div>
+              <!-- Movie 2 -->
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-bg/50 border border-white/5">
+                <div class="w-10 h-14 rounded-md flex-shrink-0"
+                     style="background: linear-gradient(135deg, #FF6B6B, #0F3460)"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-600 text-text truncate">The Grand Budapest Hotel</p>
+                  <p class="text-xs text-muted">2014 · Comedy</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-yellow font-600">★ 8.1</p>
+                  <p class="text-xs text-green font-600">94%</p>
+                </div>
+              </div>
+              <!-- Movie 3 -->
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-bg/50 border border-white/5">
+                <div class="w-10 h-14 rounded-md flex-shrink-0"
+                     style="background: linear-gradient(135deg, #4ECDC4, #1A1A2E)"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-600 text-text truncate">Everything Everywhere</p>
+                  <p class="text-xs text-muted">2022 · Sci-Fi</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-yellow font-600">★ 7.8</p>
+                  <p class="text-xs text-green font-600">91%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features ──────────────────────────────────────────────────────────── -->
+  <section class="border-t border-white/5 py-24">
+    <div class="max-w-6xl mx-auto px-6">
+      <!-- Section header -->
+      <div class="text-center mb-16">
+        <p class="text-xs font-700 uppercase tracking-[0.2em] text-green mb-3">How it works</p>
+        <h2 class="text-3xl sm:text-4xl font-800">Five steps, one perfect watchlist.</h2>
+        <p class="text-muted mt-3 max-w-lg mx-auto">
+          From your Spotify library to AI-curated movie recommendations in under a minute.
+        </p>
+      </div>
+      <!-- Cards grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-green/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-green/15 flex items-center justify-center text-xl mb-4">🎧</div>
+          <h3 class="font-700 text-text mb-1.5">Spotify Data</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            We read your top tracks, artists, audio features, and listening habits — securely, read-only.
+          </p>
+        </div>
+
+        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-coral/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-coral/15 flex items-center justify-center text-xl mb-4">📝</div>
+          <h3 class="font-700 text-text mb-1.5">Lyrics Analysis</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Genius API fetches song lyrics. HuggingFace DistilRoBERTa detects emotions in every line.
+          </p>
+        </div>
+
+        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-teal/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-teal/15 flex items-center justify-center text-xl mb-4">🧠</div>
+          <h3 class="font-700 text-text mb-1.5">Personality Cluster</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            K-Means clustering maps your combined audio + emotion features into one of six music personality archetypes.
+          </p>
+        </div>
+
+        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-yellow/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-yellow/15 flex items-center justify-center text-xl mb-4">🎬</div>
+          <h3 class="font-700 text-text mb-1.5">Movie Matching</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Sentence Transformer embeddings and cosine similarity rank 5,000+ TMDB movies by how well they fit your vibe.
+          </p>
+        </div>
+
+        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-green/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-green/15 flex items-center justify-center text-xl mb-4">✨</div>
+          <h3 class="font-700 text-text mb-1.5">AI Explanations</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Groq (Llama 3) writes a personalized, one-paragraph explanation for why each film matches your personality.
+          </p>
+        </div>
+
+        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-coral/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-coral/15 flex items-center justify-center text-xl mb-4">📚</div>
+          <h3 class="font-700 text-text mb-1.5">Session History</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Every analysis is saved locally. Browse past sessions and watch your taste evolve over time.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA Banner ─────────────────────────────────────────────────────────── -->
+  <section class="border-t border-white/5 py-20">
+    <div class="max-w-2xl mx-auto px-6 text-center flex flex-col items-center gap-6">
+      <h2 class="text-3xl sm:text-4xl font-800">Ready to find your films?</h2>
+      <p class="text-muted">Takes 30 seconds. No account needed beyond Spotify.</p>
+      <button onclick="connectSpotify()" id="bottom-cta"
+        class="flex items-center gap-2.5 px-8 py-4 rounded-full font-700 text-base text-[#0a0a0a]
+               hover:-translate-y-1 hover:shadow-[0_8px_40px_rgba(29,185,84,0.5)] hover:brightness-110
+               transition-all duration-200 active:scale-95"
+        style="background:#1DB954">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+        </svg>
+        Get Started Free
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Footer ────────────────────────────────────────────────────────────── -->
+  <footer class="border-t border-white/5 py-8">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-sm font-700">
+        music<em class="text-green not-italic">match</em>
+      </p>
+      <p class="text-xs text-muted text-center">
+        Powered by
+        <span class="text-green">Spotify</span> ·
+        <span class="text-yellow">HuggingFace</span> ·
+        <span class="text-coral">Groq</span> ·
+        <span class="text-teal">TMDB</span>
+      </p>
+      <p class="text-xs text-muted">Open source · MIT License</p>
+    </div>
+  </footer>
+
+  <!-- ── JS ────────────────────────────────────────────────────────────────── -->
+  <script>
+    async function connectSpotify() {
+      const btns = [
+        document.getElementById('cta-btn'),
+        document.getElementById('nav-cta'),
+        document.getElementById('bottom-cta'),
+      ].filter(Boolean);
+
+      btns.forEach(b => {
+        b.textContent = 'Connecting...';
+        b.disabled = true;
+      });
+
+      try {
+        const res = await fetch('/api/auth/spotify', { method: 'POST' });
+        if (!res.ok) throw new Error('Auth failed');
+        const { auth_url } = await res.json();
+        window.location.href = auth_url;
+      } catch (e) {
+        btns.forEach(b => {
+          b.innerHTML = `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+          </svg> Connect with Spotify`;
+          b.disabled = false;
+        });
+        console.error('Spotify auth error:', e);
+      }
+    }
+  </script>
+</body>
+</html>
