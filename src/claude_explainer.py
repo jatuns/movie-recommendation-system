@@ -20,44 +20,60 @@ def _get_client() -> Groq:
     return _client
 
 
+def build_recommendation_prompt(personality, emotions, top_artists,
+                                top_genres, movie_title, movie_year,
+                                movie_genre, movie_description):
+    top_emotions = sorted(emotions.items(), key=lambda x: x[1], reverse=True)[:3]
+    emotions_str = ", ".join([f"{e} ({round(v*100)}%)" for e, v in top_emotions])
+    artists_str = ", ".join(top_artists[:3])
+
+    return f"""You are a sharp, culturally fluent film critic who connects \
+music psychology to cinema.
+
+User's music profile:
+- Personality: {personality}
+- Top emotions detected in their music: {emotions_str}
+- Favorite artists: {artists_str}
+
+Film: {movie_title} ({movie_year}) — {movie_genre}
+Synopsis: {movie_description[:300]}
+
+Write exactly 2-3 sentences explaining why this film matches their musical soul.
+
+Rules:
+- Mention at least one of their actual artists by name
+- Connect a specific film element to their music personality
+- Sound like a knowledgeable friend, not a recommendation engine
+- Never start with "This film", "Based on", or "As someone who"
+- Never use: resonate, journey, tapestry, sonic, captivating, compelling
+- Second person only ("your taste", "you'll find")
+- Every sentence must earn its place — no filler"""
+
+
 def explain_recommendation(
     personality_profile: dict,
     emotion_profile: dict,
     movie: dict,
     top_artists: list = None,
+    top_genres: list = None,
 ) -> str:
     client = _get_client()
 
-    dominant_emotions = sorted(
-        emotion_profile.items(), key=lambda x: x[1], reverse=True
-    )[:3]
-    emotions_str = ", ".join(
-        f"{e} ({v:.0%})" for e, v in dominant_emotions if v > 0.05
+    personality = f"{personality_profile.get('emoji', '')} {personality_profile.get('name', '')}"
+    genres_str  = ", ".join(movie.get("genres", [])[:3]) or "Drama"
+
+    prompt = build_recommendation_prompt(
+        personality       = personality,
+        emotions          = emotion_profile,
+        top_artists       = top_artists or [],
+        top_genres        = top_genres or [],
+        movie_title       = movie.get("title", ""),
+        movie_year        = movie.get("release_year", ""),
+        movie_genre       = genres_str,
+        movie_description = movie.get("overview", ""),
     )
 
-    artists_str = ""
-    if top_artists:
-        artists_str = f"\nFavorite artists: {', '.join(top_artists[:5])}"
-
-    genres_str = ", ".join(movie.get("genres", [])[:3]) or "Drama"
-
-    prompt = f"""You are a movie recommendation expert who writes personalized, insightful explanations.
-
-User's music personality profile:
-- Profile: {personality_profile['emoji']} {personality_profile['name']}
-- Description: {personality_profile['description']}
-- Dominant emotions in their music: {emotions_str}{artists_str}
-
-Movie to explain:
-- Title: {movie['title']} ({movie.get('release_year', '')})
-- Genres: {genres_str}
-- Synopsis: {movie['overview'][:300]}
-
-Write a personalized 2-3 sentence explanation of WHY this user will love this movie, based on their music personality.
-Be specific about emotional connections between their music taste and the film's themes.
-Write in English, warm and engaging tone. Do not start with "This movie" or "Based on"."""
-
-    response = client.chat.completions.create(
+    response = _get_client().chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=200,
@@ -72,13 +88,14 @@ def explain_all_recommendations(
     emotion_profile: dict,
     movies: list,
     top_artists: list = None,
+    top_genres: list = None,
 ) -> list:
     results = []
     for i, movie in enumerate(movies):
         print(f"  [{i+1}/{len(movies)}] Generating explanation for {movie['title']}...")
         try:
             explanation = explain_recommendation(
-                personality_profile, emotion_profile, movie, top_artists
+                personality_profile, emotion_profile, movie, top_artists, top_genres
             )
         except Exception as e:
             explanation = f"Your {personality_profile['name']} personality makes this film a compelling watch — it echoes the emotional depth found in your music."

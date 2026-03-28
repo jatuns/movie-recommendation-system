@@ -757,7 +757,8 @@ def page_analyze():
                 raw_recs = recommend_movies(personality["mood_description"], movies, embeddings, top_n=10)
                 update(88, "✨ Writing AI explanations (Groq)...")
                 top_artists = user_data["artists_df"]["artist_name"].tolist()[:5]
-                recommendations = explain_all_recommendations(personality, emotion_profile, raw_recs, top_artists)
+                top_genres  = user_data.get("all_genres", [])[:10]
+                recommendations = explain_all_recommendations(personality, emotion_profile, raw_recs, top_artists, top_genres)
                 st.session_state.recommendations = recommendations
             update(95, "Almost there...", "10 movies matched & explained")
 

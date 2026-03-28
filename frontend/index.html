@@ -39,6 +39,17 @@
     body { background-color: #1A1A2E; color: #EAEAEA; }
     .gradient-text { background: linear-gradient(135deg, #1DB954, #4ECDC4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .hero-glow { background: radial-gradient(ellipse 60% 50% at 50% 60%, rgba(29,185,84,0.12) 0%, transparent 70%); }
+
+    /* ── mm-animations ── */
+    @keyframes mmFadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+    body{animation:mmFadeUp .22s ease both}
+    .mm-stagger>*{opacity:0;animation:mmFadeUp .45s ease forwards}
+    .mm-stagger>*:nth-child(1){animation-delay:.04s}.mm-stagger>*:nth-child(2){animation-delay:.11s}
+    .mm-stagger>*:nth-child(3){animation-delay:.18s}.mm-stagger>*:nth-child(4){animation-delay:.25s}
+    .mm-stagger>*:nth-child(5){animation-delay:.32s}.mm-stagger>*:nth-child(6){animation-delay:.39s}
+    .mm-reveal{opacity:0;transform:translateY(20px);transition:opacity .55s ease,transform .55s ease}
+    .mm-reveal.mm-on{opacity:1;transform:none}
+    .mm-letter{position:absolute;font-size:clamp(100px,16vw,220px);font-weight:900;opacity:.05;pointer-events:none;user-select:none;top:-.1em;right:-.05em;line-height:1;will-change:transform;color:#EAEAEA}
   </style>
 </head>
 <body class="font-sans antialiased">
@@ -52,7 +63,7 @@
       </a>
       <!-- Right nav -->
       <div class="flex items-center gap-4">
-        <a href="https://github.com" target="_blank"
+        <a href="https://github.com/jatuns" target="_blank"
            class="text-sm text-muted hover:text-text transition-colors hidden sm:block">
           GitHub
         </a>
@@ -71,7 +82,7 @@
     <div class="max-w-6xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
       <!-- Left: copy -->
-      <div class="flex flex-col gap-6">
+      <div class="flex flex-col gap-6 mm-stagger">
         <!-- Badge pill -->
         <div class="inline-flex items-center gap-2 w-fit px-3 py-1.5 rounded-full
                     bg-green/10 border border-green/20 text-green text-xs font-500">
@@ -133,7 +144,9 @@
           <div class="p-5 flex flex-col gap-4">
             <!-- Personality card -->
             <div class="bg-green/10 border border-green/20 rounded-xl p-4 flex items-center gap-3">
-              <span class="text-3xl">🎭</span>
+              <span class="text-green flex items-center justify-center w-10 h-10">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+              </span>
               <div>
                 <p class="text-sm font-700 text-text">Sophisticated &amp; Complex</p>
                 <div class="flex items-center gap-2 mt-0.5">
@@ -200,8 +213,9 @@
   </section>
 
   <!-- ── Features ──────────────────────────────────────────────────────────── -->
-  <section class="border-t border-white/5 py-24">
+  <section class="relative overflow-hidden border-t border-white/5 py-24">
     <div class="max-w-6xl mx-auto px-6">
+      <div class="mm-letter" aria-hidden="true">H</div>
       <!-- Section header -->
       <div class="text-center mb-16">
         <p class="text-xs font-700 uppercase tracking-[0.2em] text-green mb-3">How it works</p>
@@ -213,48 +227,60 @@
       <!-- Cards grid -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-green/30 transition-colors">
-          <div class="w-11 h-11 rounded-xl bg-green/15 flex items-center justify-center text-xl mb-4">🎧</div>
+        <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 hover:border-green/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-green/15 flex items-center justify-center mb-4 text-green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+          </div>
           <h3 class="font-700 text-text mb-1.5">Spotify Data</h3>
           <p class="text-sm text-muted leading-relaxed">
             We read your top tracks, artists, audio features, and listening habits — securely, read-only.
           </p>
         </div>
 
-        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-coral/30 transition-colors">
-          <div class="w-11 h-11 rounded-xl bg-coral/15 flex items-center justify-center text-xl mb-4">📝</div>
+        <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 hover:border-coral/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-coral/15 flex items-center justify-center mb-4 text-coral">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
           <h3 class="font-700 text-text mb-1.5">Lyrics Analysis</h3>
           <p class="text-sm text-muted leading-relaxed">
             Genius API fetches song lyrics. HuggingFace DistilRoBERTa detects emotions in every line.
           </p>
         </div>
 
-        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-teal/30 transition-colors">
-          <div class="w-11 h-11 rounded-xl bg-teal/15 flex items-center justify-center text-xl mb-4">🧠</div>
+        <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 hover:border-teal/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-teal/15 flex items-center justify-center mb-4 text-teal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+          </div>
           <h3 class="font-700 text-text mb-1.5">Personality Cluster</h3>
           <p class="text-sm text-muted leading-relaxed">
             K-Means clustering maps your combined audio + emotion features into one of six music personality archetypes.
           </p>
         </div>
 
-        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-yellow/30 transition-colors">
-          <div class="w-11 h-11 rounded-xl bg-yellow/15 flex items-center justify-center text-xl mb-4">🎬</div>
+        <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 hover:border-yellow/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-yellow/15 flex items-center justify-center mb-4 text-yellow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 3.9"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+          </div>
           <h3 class="font-700 text-text mb-1.5">Movie Matching</h3>
           <p class="text-sm text-muted leading-relaxed">
             Sentence Transformer embeddings and cosine similarity rank 5,000+ TMDB movies by how well they fit your vibe.
           </p>
         </div>
 
-        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-green/30 transition-colors">
-          <div class="w-11 h-11 rounded-xl bg-green/15 flex items-center justify-center text-xl mb-4">✨</div>
+        <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 hover:border-green/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-green/15 flex items-center justify-center mb-4 text-green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+          </div>
           <h3 class="font-700 text-text mb-1.5">AI Explanations</h3>
           <p class="text-sm text-muted leading-relaxed">
             Groq (Llama 3) writes a personalized, one-paragraph explanation for why each film matches your personality.
           </p>
         </div>
 
-        <div class="bg-surface border border-white/5 rounded-2xl p-6 hover:border-coral/30 transition-colors">
-          <div class="w-11 h-11 rounded-xl bg-coral/15 flex items-center justify-center text-xl mb-4">📚</div>
+        <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 hover:border-coral/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-coral/15 flex items-center justify-center mb-4 text-coral">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          </div>
           <h3 class="font-700 text-text mb-1.5">Session History</h3>
           <p class="text-sm text-muted leading-relaxed">
             Every analysis is saved locally. Browse past sessions and watch your taste evolve over time.
@@ -266,10 +292,11 @@
   </section>
 
   <!-- ── CTA Banner ─────────────────────────────────────────────────────────── -->
-  <section class="border-t border-white/5 py-20">
+  <section class="relative overflow-hidden border-t border-white/5 py-20">
     <div class="max-w-2xl mx-auto px-6 text-center flex flex-col items-center gap-6">
-      <h2 class="text-3xl sm:text-4xl font-800">Ready to find your films?</h2>
-      <p class="text-muted">Takes 30 seconds. No account needed beyond Spotify.</p>
+      <div class="mm-letter" aria-hidden="true">R</div>
+      <h2 class="mm-reveal text-3xl sm:text-4xl font-800">Ready to find your films?</h2>
+      <p class="mm-reveal text-muted">Takes 30 seconds. No account needed beyond Spotify.</p>
       <button onclick="connectSpotify()" id="bottom-cta"
         class="flex items-center gap-2.5 px-8 py-4 rounded-full font-700 text-base text-[#0a0a0a]
                hover:-translate-y-1 hover:shadow-[0_8px_40px_rgba(29,185,84,0.5)] hover:brightness-110
@@ -302,33 +329,70 @@
 
   <!-- ── JS ────────────────────────────────────────────────────────────────── -->
   <script>
-    async function connectSpotify() {
-      const btns = [
-        document.getElementById('cta-btn'),
-        document.getElementById('nav-cta'),
-        document.getElementById('bottom-cta'),
-      ].filter(Boolean);
+    // Per-button original content (nav-cta has no icon)
+    const BTN_DEFAULTS = {
+      'cta-btn':    `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg> Connect with Spotify`,
+      'nav-cta':    'Connect Spotify',
+      'bottom-cta': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg> Connect with Spotify`,
+    };
 
-      btns.forEach(b => {
-        b.textContent = 'Connecting...';
-        b.disabled = true;
+    function resetButtons() {
+      Object.entries(BTN_DEFAULTS).forEach(([id, html]) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.innerHTML = html;
+        b.disabled  = false;
+      });
+    }
+
+    let _authController = null;
+
+    // When user navigates away: abort any in-flight fetch
+    window.addEventListener('pagehide', () => {
+      if (_authController) _authController.abort();
+    });
+
+    // When user returns via back button (bfcache): reset UI
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) resetButtons();
+    });
+
+    async function connectSpotify() {
+      Object.keys(BTN_DEFAULTS).forEach(id => {
+        const b = document.getElementById(id);
+        if (b) { b.textContent = 'Connecting...'; b.disabled = true; }
       });
 
+      _authController = new AbortController();
+
       try {
-        const res = await fetch('/api/auth/spotify', { method: 'POST' });
+        const res = await fetch('/api/auth/spotify', {
+          method: 'POST',
+          signal: _authController.signal,
+        });
         if (!res.ok) throw new Error('Auth failed');
         const { auth_url } = await res.json();
         window.location.href = auth_url;
       } catch (e) {
-        btns.forEach(b => {
-          b.innerHTML = `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-          </svg> Connect with Spotify`;
-          b.disabled = false;
-        });
-        console.error('Spotify auth error:', e);
+        if (e.name !== 'AbortError') {
+          resetButtons();
+          console.error('Spotify auth error:', e);
+        }
       }
     }
+  </script>
+
+  <script>
+    // Scroll reveal
+    const _io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('mm-on');_io.unobserve(e.target)}}),{threshold:.1});
+    document.querySelectorAll('.mm-reveal').forEach(el=>_io.observe(el));
+    // Parallax ghost letters
+    window.addEventListener('scroll',()=>{
+      document.querySelectorAll('.mm-letter').forEach(el=>{
+        const p=el.parentElement;if(!p)return;
+        el.style.transform=`translateY(${p.getBoundingClientRect().top*.12}px)`;
+      });
+    },{passive:true});
   </script>
 </body>
 </html>

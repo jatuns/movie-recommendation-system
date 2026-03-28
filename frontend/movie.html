@@ -34,6 +34,17 @@
       color: #1DB954;
       border-left-color: #1DB954;
     }
+
+    /* ── mm-animations ── */
+    @keyframes mmFadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+    body{animation:mmFadeUp .22s ease both}
+    .mm-stagger>*{opacity:0;animation:mmFadeUp .45s ease forwards}
+    .mm-stagger>*:nth-child(1){animation-delay:.04s}.mm-stagger>*:nth-child(2){animation-delay:.11s}
+    .mm-stagger>*:nth-child(3){animation-delay:.18s}.mm-stagger>*:nth-child(4){animation-delay:.25s}
+    .mm-stagger>*:nth-child(5){animation-delay:.32s}.mm-stagger>*:nth-child(6){animation-delay:.39s}
+    .mm-reveal{opacity:0;transform:translateY(20px);transition:opacity .55s ease,transform .55s ease}
+    .mm-reveal.mm-on{opacity:1;transform:none}
+    .mm-letter{position:absolute;font-size:clamp(100px,16vw,220px);font-weight:900;opacity:.05;pointer-events:none;user-select:none;top:-.1em;right:-.05em;line-height:1;will-change:transform;color:#EAEAEA}
   </style>
 </head>
 <body class="font-sans antialiased min-h-screen flex">
@@ -62,7 +73,9 @@
 
       <!-- Not found state -->
       <div id="not-found" class="hidden text-center py-24">
-        <p class="text-4xl mb-4">🎬</p>
+        <div class="flex justify-center mb-4">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 3.9"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+        </div>
         <h2 class="text-xl font-700 mb-2">Movie not found</h2>
         <p class="text-muted mb-6">This movie doesn't seem to exist in your recommendations.</p>
         <a id="not-found-back" href="#" class="text-green hover:underline text-sm">
@@ -74,7 +87,7 @@
       <div id="movie-detail" class="hidden">
 
         <!-- Two-col layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-[288px_1fr] gap-10">
+        <div class="mm-reveal grid grid-cols-1 lg:grid-cols-[288px_1fr] gap-10">
 
           <!-- Left: Poster -->
           <div class="flex flex-col gap-4">
@@ -144,7 +157,7 @@
         </div>
 
         <!-- Other recommendations -->
-        <div class="mt-12 pt-8 border-t border-white/5">
+        <div class="mm-reveal mt-12 pt-8 border-t border-white/5">
           <h2 class="text-lg font-700 mb-5">More Recommendations</h2>
           <div id="other-movies" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"></div>
         </div>
@@ -164,6 +177,13 @@
       genres:      'mmAllGenres',
       artists:     'mmArtists',
       tracks:      'mmTracks',
+    };
+
+    const IC = {
+      home:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+      user:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+      book:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+      logout: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
     };
 
     function escHtml(s) {
@@ -198,21 +218,21 @@
           <nav class="flex flex-col gap-1">
             <a href="/dashboard?session_id=${escHtml(sid)}"
                class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='dashboard'?'active':''}">
-              <span>🏠</span> Dashboard
+              ${IC.home} Dashboard
             </a>
             <a href="/profile.html?session_id=${escHtml(sid)}"
                class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='profile'?'active':''}">
-              <span>👤</span> Profile
+              ${IC.user} Profile
             </a>
             <a href="/history.html"
                class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='history'?'active':''}">
-              <span>📚</span> History
+              ${IC.book} History
             </a>
           </nav>
           <div class="mt-auto pt-4 border-t border-white/5">
             <button onclick="disconnect()"
               class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-500 text-muted hover:text-coral hover:bg-coral/10 transition-colors">
-              <span>🚪</span> Disconnect
+              ${IC.logout} Disconnect
             </button>
           </div>
         </div>
@@ -271,9 +291,9 @@
       document.getElementById('overview').textContent     = m.overview    || 'No overview available.';
 
       // Badges
-      document.getElementById('star-badge').textContent  = `★ ${(m.vote_average||0).toFixed(1)}`;
-      document.getElementById('pct-badge').textContent   = `🎯 ${pct}% match`;
-      document.getElementById('rating-val').textContent  = `★ ${(m.vote_average||0).toFixed(1)}`;
+      document.getElementById('star-badge').innerHTML  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> ${(m.vote_average||0).toFixed(1)}`;
+      document.getElementById('pct-badge').innerHTML   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> ${pct}% match`;
+      document.getElementById('rating-val').innerHTML  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> ${(m.vote_average||0).toFixed(1)}`;
       document.getElementById('match-pct').textContent   = `${pct}%`;
       document.getElementById('match-bar').style.width   = pct + '%';
 
@@ -300,8 +320,10 @@
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">`
                 : ''}
-              <div class="${om.poster_url ? 'hidden' : 'flex'} w-full h-full items-center justify-center text-3xl"
-                   style="background: linear-gradient(135deg, ${posterGradient(realIdx)})">🎬</div>
+              <div class="${om.poster_url ? 'hidden' : 'flex'} w-full h-full items-center justify-center"
+                   style="background: linear-gradient(135deg, ${posterGradient(realIdx)})">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 3.9"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+              </div>
               <div class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-md bg-green/90 text-bg text-xs font-700">
                 ${opct}%
               </div>
@@ -314,9 +336,24 @@
     }
 
     function fallbackPoster(i) {
-      return `<div class="w-full h-96 flex items-center justify-center text-5xl"
-                   style="background: linear-gradient(135deg, ${posterGradient(i)})">🎬</div>`;
+      return `<div class="w-full h-96 flex items-center justify-center"
+                   style="background: linear-gradient(135deg, ${posterGradient(i)})">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 3.9"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+              </div>`;
     }
+  </script>
+
+  <script>
+    // Scroll reveal
+    const _io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('mm-on');_io.unobserve(e.target)}}),{threshold:.1});
+    document.querySelectorAll('.mm-reveal').forEach(el=>_io.observe(el));
+    // Parallax ghost letters
+    window.addEventListener('scroll',()=>{
+      document.querySelectorAll('.mm-letter').forEach(el=>{
+        const p=el.parentElement;if(!p)return;
+        el.style.transform=`translateY(${p.getBoundingClientRect().top*.12}px)`;
+      });
+    },{passive:true});
   </script>
 </body>
 </html>

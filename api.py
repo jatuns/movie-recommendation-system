@@ -80,6 +80,7 @@ _embeddings: Any = None   # numpy array, loaded lazily
 
 # ── Background analysis pipeline ─────────────────────────────────────────────
 _analysis_status: dict = {}
+_cancelled_sessions: set = set()
 _executor = ThreadPoolExecutor(max_workers=2)
 
 _step_messages = {
@@ -103,6 +104,10 @@ def _update_status(sid: str, step: str, pct: int, done: bool = False, error: str
     }
 
 
+def _is_cancelled(session_id: str) -> bool:
+    return session_id in _cancelled_sessions
+
+
 def _run_pipeline(session_id: str):
     global _movies, _embeddings
     session = _sessions.get(session_id)
@@ -113,15 +118,21 @@ def _run_pipeline(session_id: str):
         user_data = session["user_data"]
         tracks_with_lyrics = fetch_lyrics_for_tracks(user_data["tracks_df"], top_n=20)
 
+        if _is_cancelled(session_id): return
+
         _update_status(session_id, "emotions", 40)
         emotion_profile = compute_emotion_profile(tracks_with_lyrics)
         feature_vector = build_user_feature_vector(user_data["tracks_df"], emotion_profile)
         session["emotion_profile"] = emotion_profile
         session["feature_vector"] = feature_vector
 
+        if _is_cancelled(session_id): return
+
         _update_status(session_id, "personality", 62)
         personality = assign_personality(feature_vector)
         session["personality"] = personality
+
+        if _is_cancelled(session_id): return
 
         _update_status(session_id, "movies", 72)
         if _movies is None:
@@ -130,9 +141,12 @@ def _run_pipeline(session_id: str):
             _embeddings = load_or_build_embeddings(_movies)
         raw_recs = recommend_movies(personality["mood_description"], _movies, _embeddings, top_n=10)
 
+        if _is_cancelled(session_id): return
+
         _update_status(session_id, "explanations", 88)
         top_artists = user_data["artists_df"]["artist_name"].tolist()[:5]
-        recommendations = explain_all_recommendations(personality, emotion_profile, raw_recs, top_artists)
+        top_genres  = user_data.get("all_genres", [])[:10]
+        recommendations = explain_all_recommendations(personality, emotion_profile, raw_recs, top_artists, top_genres)
         session["recommendations"] = recommendations
 
         try:
@@ -151,6 +165,8 @@ def _run_pipeline(session_id: str):
         _update_status(session_id, "complete", 100, done=True)
     except Exception as e:
         _update_status(session_id, "error", 0, done=True, error=str(e))
+    finally:
+        _cancelled_sessions.discard(session_id)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -445,6 +461,13 @@ async def start_analysis(session_id: str = Query(...)):
     loop = asyncio.get_event_loop()
     loop.run_in_executor(_executor, _run_pipeline, session_id)
     return {"status": "started"}
+
+
+@app.post("/api/analyze/cancel")
+def cancel_analysis(session_id: str = Query(...)):
+    """Signals the background pipeline to stop after its current step."""
+    _cancelled_sessions.add(session_id)
+    return {"status": "cancellation_requested"}
 
 
 @app.get("/api/analyze/status")
