@@ -113,13 +113,17 @@ def get_top_tracks(sp: spotipy.Spotify, limit: int = 50) -> list[dict]:
     results = sp.current_user_top_tracks(limit=limit, time_range="medium_term")
     tracks = []
     for item in results.get("items", []):
+        album   = item.get("album", {})
+        images  = album.get("images", [])
+        album_image = images[-1]["url"] if images else None  # smallest image for thumbnails
         tracks.append({
-            "track_id": item.get("id"),
-            "track_name": item.get("name"),
+            "track_id":    item.get("id"),
+            "track_name":  item.get("name"),
             "artist_name": item["artists"][0]["name"] if item.get("artists") else "Unknown",
-            "artist_id": item["artists"][0]["id"] if item.get("artists") else None,
-            "popularity": item.get("popularity", 0),
-            "album_name": item.get("album", {}).get("name", ""),
+            "artist_id":   item["artists"][0]["id"] if item.get("artists") else None,
+            "popularity":  item.get("popularity", 0),
+            "album_name":  album.get("name", ""),
+            "album_image": album_image,
         })
     return tracks
 

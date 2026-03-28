@@ -338,23 +338,30 @@
       }).join('');
     }
 
+    const MUSIC_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+
     function renderTracks() {
       const el = document.getElementById('tracks-grid');
       if (!tracks.length) {
         el.innerHTML = `<p class="text-sm text-muted col-span-2">No track data available.</p>`; return;
       }
-      el.innerHTML = tracks.slice(0, 20).map((t, i) => `
+      el.innerHTML = tracks.slice(0, 20).map((t, i) => {
+        const fallback = `style="background:linear-gradient(135deg,rgba(29,185,84,0.15),rgba(15,52,96,0.6))"`;
+        const thumb = t.album_image
+          ? `<img src="${escHtml(t.album_image)}" alt=""
+                  class="w-9 h-9 rounded-lg object-cover flex-shrink-0"
+                  onerror="this.outerHTML='<div class=\\'w-9 h-9 rounded-lg flex items-center justify-center text-green flex-shrink-0\\' ${fallback}>${MUSIC_ICON}</div>'">`
+          : `<div class="w-9 h-9 rounded-lg flex items-center justify-center text-green flex-shrink-0" ${fallback}>${MUSIC_ICON}</div>`;
+        return `
         <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-bg/40 transition-colors">
           <span class="text-xs font-700 text-muted w-5 text-right flex-shrink-0">${i+1}</span>
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-green flex-shrink-0"
-               style="background:linear-gradient(135deg,rgba(29,185,84,0.15),rgba(15,52,96,0.6))">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          </div>
+          ${thumb}
           <div class="flex-1 min-w-0">
             <p class="text-sm font-600 text-text truncate">${escHtml(t.track_name || '')}</p>
             <p class="text-xs text-muted truncate">${escHtml(t.artist_name || '')}</p>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
 
     function renderEmotions() {
