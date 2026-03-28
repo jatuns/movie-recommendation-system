@@ -223,6 +223,29 @@
       `;
     }
 
+    // ── Constants ─────────────────────────────────────────────────────────────
+    const EMOTION_COLORS = {
+      joy:'#1DB954', sadness:'#4ECDC4', anger:'#FF6B6B', fear:'#FFE66D',
+      love:'#FF6B6B', surprise:'#FFE66D', neutral:'#6B7280', disgust:'#FF6B6B', optimism:'#1DB954',
+    };
+    const CLUSTER_COLORS = {
+      'Dark & Introspective':'#4a4a8a', 'Energetic & Bold':'#e84c3d',
+      'Feel-good & Social':'#f39c12',   'Moody & Atmospheric':'#2ecc71',
+      'Sophisticated & Complex':'#9b59b6', 'Calm & Reflective':'#1abc9c',
+    };
+    const CLUSTER_EMOJIS = {
+      'Dark & Introspective':'🖤', 'Energetic & Bold':'⚡',
+      'Feel-good & Social':'☀️',   'Moody & Atmospheric':'🌙',
+      'Sophisticated & Complex':'🎭', 'Calm & Reflective':'🌿',
+    };
+
+    const audioMetrics = [
+      { key:'energy',       label:'Energy',       color:'#1DB954' },
+      { key:'valence',      label:'Valence',       color:'#FFE66D' },
+      { key:'danceability', label:'Danceability',  color:'#4ECDC4' },
+      { key:'acousticness', label:'Acousticness',  color:'#FF6B6B' },
+    ];
+
     // ── Init ──────────────────────────────────────────────────────────────────
     const params = new URLSearchParams(window.location.search);
     const sid    = params.get('session_id') || localStorage.getItem(LS.session);
@@ -230,318 +253,250 @@
 
     renderSidebar('profile');
 
-    const user        = JSON.parse(localStorage.getItem(LS.user)        || '{}');
-    const personality = JSON.parse(localStorage.getItem(LS.personality) || '{}');
-    const emotions    = JSON.parse(localStorage.getItem(LS.emotions)    || '{}');
-    const genres      = JSON.parse(localStorage.getItem(LS.genres)      || '[]');
-    const artists     = JSON.parse(localStorage.getItem(LS.artists)     || '[]');
-    const tracks      = JSON.parse(localStorage.getItem(LS.tracks)      || '[]');
+    // State — mutable, updated by API calls
+    let user        = JSON.parse(localStorage.getItem(LS.user)        || '{}');
+    let personality = JSON.parse(localStorage.getItem(LS.personality) || '{}');
+    let emotions    = JSON.parse(localStorage.getItem(LS.emotions)    || '{}');
+    let genres      = JSON.parse(localStorage.getItem(LS.genres)      || '[]');
+    let artists     = JSON.parse(localStorage.getItem(LS.artists)     || '[]');
+    let tracks      = JSON.parse(localStorage.getItem(LS.tracks)      || '[]');
 
-    // Header
-    document.getElementById('header-username').textContent =
-      user.display_name ? `@${user.display_name}` : '';
-
-    const pill = document.getElementById('personality-pill');
-    if (personality.name) {
-      pill.textContent = `${personality.emoji || ''} ${personality.name}`;
-      pill.classList.remove('hidden');
+    // ── Render functions ──────────────────────────────────────────────────────
+    function renderHeader() {
+      document.getElementById('header-username').textContent =
+        user.display_name ? `@${user.display_name}` : '';
+      const pill = document.getElementById('personality-pill');
+      if (personality.name) {
+        pill.textContent = `${personality.emoji || ''} ${personality.name}`;
+        pill.classList.remove('hidden');
+      }
     }
 
-    // ── Artists list ──────────────────────────────────────────────────────────
-    const artistsEl = document.getElementById('artists-list');
-    if (!artists.length) {
-      artistsEl.innerHTML = `<p class="text-sm text-muted">No artist data available.</p>`;
-    } else {
-      artistsEl.innerHTML = artists.slice(0, 10).map((a, i) => {
-        const genreChips = (a.genres || []).slice(0, 3).map(g =>
-          `<span class="px-1.5 py-0.5 rounded-md bg-teal/10 border border-teal/20 text-teal text-xs">
-            ${escHtml(g)}
-          </span>`
+    function renderArtists() {
+      const el = document.getElementById('artists-list');
+      if (!artists.length) {
+        el.innerHTML = `<p class="text-sm text-muted">No artist data available.</p>`; return;
+      }
+      el.innerHTML = artists.slice(0, 10).map((a, i) => {
+        const chips = (a.genres || []).slice(0, 3).map(g =>
+          `<span class="px-1.5 py-0.5 rounded-md bg-teal/10 border border-teal/20 text-teal text-xs">${escHtml(g)}</span>`
         ).join('');
-        return `
-          <div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
-            <span class="text-xs font-700 text-muted w-5 text-right">${i+1}</span>
-            <div class="w-8 h-8 rounded-full bg-teal/15 flex items-center justify-center text-teal font-700 text-xs flex-shrink-0">
-              ${escHtml((a.artist_name||'?').charAt(0).toUpperCase())}
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-600 text-text truncate">${escHtml(a.artist_name || '')}</p>
-              <div class="flex flex-wrap gap-1 mt-1">${genreChips}</div>
-            </div>
-          </div>`;
+        return `<div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+          <span class="text-xs font-700 text-muted w-5 text-right">${i+1}</span>
+          <div class="w-8 h-8 rounded-full bg-teal/15 flex items-center justify-center text-teal font-700 text-xs flex-shrink-0">
+            ${escHtml((a.artist_name||'?').charAt(0).toUpperCase())}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-600 text-text truncate">${escHtml(a.artist_name || '')}</p>
+            <div class="flex flex-wrap gap-1 mt-1">${chips}</div>
+          </div>
+        </div>`;
       }).join('');
     }
 
-    // ── Genre cloud ───────────────────────────────────────────────────────────
-    const genreEl = document.getElementById('genre-cloud');
-    if (!genres.length) {
-      genreEl.innerHTML = `<p class="text-sm text-muted">No genre data available.</p>`;
-    } else {
-      // Count frequencies
+    function renderGenreCloud() {
+      const el = document.getElementById('genre-cloud');
+      if (!genres.length) {
+        el.innerHTML = `<p class="text-sm text-muted">No genre data available.</p>`; return;
+      }
       const freq = {};
       genres.forEach(g => { freq[g] = (freq[g] || 0) + 1; });
       const sorted = Object.entries(freq).sort((a,b) => b[1]-a[1]);
       const maxFreq = sorted[0]?.[1] || 1;
-
-      genreEl.innerHTML = sorted.map(([g, cnt]) => {
-        const ratio   = cnt / maxFreq;
-        const opacity = 0.4 + ratio * 0.6;
-        const size    = ratio > 0.7 ? 'text-base' : ratio > 0.4 ? 'text-sm' : 'text-xs';
-        return `
-          <span class="${size} font-500 px-3 py-1.5 rounded-full border border-coral/20 cursor-default"
-                style="color: #FF6B6B; background: rgba(255,107,107,${(opacity * 0.15).toFixed(2)}); opacity: ${opacity.toFixed(2)}">
-            ${escHtml(g)}
-          </span>`;
+      el.innerHTML = sorted.map(([g, cnt]) => {
+        const ratio = cnt / maxFreq;
+        const opacity = (0.4 + ratio * 0.6).toFixed(2);
+        const size = ratio > 0.7 ? 'text-base' : ratio > 0.4 ? 'text-sm' : 'text-xs';
+        return `<span class="${size} font-500 px-3 py-1.5 rounded-full border border-coral/20 cursor-default"
+          style="color:#FF6B6B;background:rgba(255,107,107,${(ratio*0.15).toFixed(2)});opacity:${opacity}">
+          ${escHtml(g)}</span>`;
       }).join('');
     }
 
-    // ── Audio DNA ─────────────────────────────────────────────────────────────
-    const audioMetrics = [
-      { key: 'energy',       label: 'Energy',       color: '#1DB954' },
-      { key: 'valence',      label: 'Valence',       color: '#FFE66D' },
-      { key: 'danceability', label: 'Danceability',  color: '#4ECDC4' },
-      { key: 'acousticness', label: 'Acousticness',  color: '#FF6B6B' },
-    ];
-
-    // Try to pull audio features from localStorage personality (they may not be stored)
-    // Fall back gracefully with empty bars
-    const audioEl = document.getElementById('audio-dna');
-    // We'll fetch from session if needed — for now render from what we have
-    const storedPersonality = personality || {};
-    const audioFeatures     = storedPersonality.audio_features || {};
-
-    audioEl.innerHTML = audioMetrics.map(({ key, label, color }) => {
-      const val = audioFeatures[key];
-      const pct = val != null ? Math.round(val * 100) : null;
-      return `
-        <div>
+    function renderAudioDNA(af) {
+      const el = document.getElementById('audio-dna');
+      el.innerHTML = audioMetrics.map(({ key, label, color }) => {
+        const val = af[key];
+        const pct = val != null ? Math.round(val * 100) : null;
+        return `<div>
           <div class="flex justify-between text-xs mb-1.5">
             <span class="text-text">${label}</span>
             <span style="color:${color}" class="font-600">${pct != null ? pct+'%' : '—'}</span>
           </div>
           <div class="h-2 bg-bg rounded-full overflow-hidden">
             <div class="h-2 rounded-full transition-all duration-700"
-                 style="width:${pct != null ? pct : 0}%; background:${color}"></div>
+                 style="width:${pct ?? 0}%;background:${color}"></div>
           </div>
         </div>`;
-    }).join('');
-
-    // Fetch audio features from API to fill in DNA bars
-    if (sid) {
-      fetch(`/api/profile?session_id=${sid}`)
-        .then(r => r.json())
-        .then(data => {
-          const af = data.audio_features || {};
-          audioEl.innerHTML = audioMetrics.map(({ key, label, color }) => {
-            const val = af[key];
-            const pct = val != null ? Math.round(val * 100) : null;
-            return `
-              <div>
-                <div class="flex justify-between text-xs mb-1.5">
-                  <span class="text-text">${label}</span>
-                  <span style="color:${color}" class="font-600">${pct != null ? pct+'%' : '—'}</span>
-                </div>
-                <div class="h-2 bg-bg rounded-full overflow-hidden">
-                  <div class="h-2 rounded-full transition-all duration-700"
-                       style="width:${pct != null ? pct : 0}%; background:${color}"></div>
-                </div>
-              </div>`;
-          }).join('');
-        })
-        .catch(() => {});
+      }).join('');
     }
 
-    // ── Top Tracks ────────────────────────────────────────────────────────────
-    const tracksEl = document.getElementById('tracks-grid');
-    if (!tracks.length) {
-      tracksEl.innerHTML = `<p class="text-sm text-muted col-span-2">No track data available.</p>`;
-    } else {
-      tracksEl.innerHTML = tracks.slice(0, 20).map((t, i) => `
+    function renderTracks() {
+      const el = document.getElementById('tracks-grid');
+      if (!tracks.length) {
+        el.innerHTML = `<p class="text-sm text-muted col-span-2">No track data available.</p>`; return;
+      }
+      el.innerHTML = tracks.slice(0, 20).map((t, i) => `
         <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-bg/40 transition-colors">
           <span class="text-xs font-700 text-muted w-5 text-right flex-shrink-0">${i+1}</span>
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-green flex-shrink-0"
-               style="background: linear-gradient(135deg, rgba(29,185,84,0.15), rgba(15,52,96,0.6))">
+               style="background:linear-gradient(135deg,rgba(29,185,84,0.15),rgba(15,52,96,0.6))">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-600 text-text truncate">${escHtml(t.track_name || '')}</p>
             <p class="text-xs text-muted truncate">${escHtml(t.artist_name || '')}</p>
           </div>
-        </div>`
-      ).join('');
+        </div>`).join('');
     }
 
-    // ── Emotion Breakdown ─────────────────────────────────────────────────────
-    const EMOTION_COLORS = {
-      joy:      '#1DB954',
-      sadness:  '#4ECDC4',
-      anger:    '#FF6B6B',
-      fear:     '#FFE66D',
-      love:     '#FF6B6B',
-      surprise: '#FFE66D',
-      neutral:  '#6B7280',
-      disgust:  '#FF6B6B',
-      optimism: '#1DB954',
-    };
-
-    const emotionEl = document.getElementById('emotion-breakdown');
-    const emotionEntries = Object.entries(emotions).sort((a,b) => b[1]-a[1]);
-    if (!emotionEntries.length) {
-      emotionEl.innerHTML = `<p class="text-sm text-muted">No emotion data available.</p>`;
-    } else {
-      emotionEl.innerHTML = emotionEntries.map(([label, val]) => {
-        const pct   = Math.round(val * 100);
+    function renderEmotions() {
+      const el = document.getElementById('emotion-breakdown');
+      const entries = Object.entries(emotions).sort((a,b) => b[1]-a[1]);
+      if (!entries.length) {
+        el.innerHTML = `<p class="text-sm text-muted">No emotion data available.</p>`; return;
+      }
+      el.innerHTML = entries.map(([label, val]) => {
+        const pct = Math.round(val * 100);
         const color = EMOTION_COLORS[label.toLowerCase()] || '#6B7280';
-        return `
-          <div>
-            <div class="flex justify-between items-center mb-1.5">
-              <span class="text-sm font-600 capitalize text-text">${escHtml(label)}</span>
-              <span class="text-xs font-700" style="color:${color}">${pct}%</span>
-            </div>
-            <div class="h-1.5 bg-bg rounded-full overflow-hidden">
-              <div class="h-1.5 rounded-full transition-all duration-700"
-                   style="width:${pct}%; background:${color}"></div>
-            </div>
-          </div>`;
+        return `<div>
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-sm font-600 capitalize text-text">${escHtml(label)}</span>
+            <span class="text-xs font-700" style="color:${color}">${pct}%</span>
+          </div>
+          <div class="h-1.5 bg-bg rounded-full overflow-hidden">
+            <div class="h-1.5 rounded-full transition-all duration-700" style="width:${pct}%;background:${color}"></div>
+          </div>
+        </div>`;
       }).join('');
     }
 
-    // ── Personality Affinity bars ─────────────────────────────────────────────
-    const CLUSTER_COLORS = {
-      'Dark & Introspective':   '#4a4a8a',
-      'Energetic & Bold':       '#e84c3d',
-      'Feel-good & Social':     '#f39c12',
-      'Moody & Atmospheric':    '#2ecc71',
-      'Sophisticated & Complex':'#9b59b6',
-      'Calm & Reflective':      '#1abc9c',
-    };
-    const CLUSTER_EMOJIS = {
-      'Dark & Introspective':   '🖤',
-      'Energetic & Bold':       '⚡',
-      'Feel-good & Social':     '☀️',
-      'Moody & Atmospheric':    '🌙',
-      'Sophisticated & Complex':'🎭',
-      'Calm & Reflective':      '🌿',
-    };
-
-    const affinityEl = document.getElementById('affinity-bars');
-    const similarities = personality.all_similarities || {};
-    const simEntries = Object.entries(similarities).sort((a,b) => b[1]-a[1]);
-
-    if (!simEntries.length) {
-      affinityEl.innerHTML = `<p class="text-sm text-muted">No affinity data available.</p>`;
-    } else {
-      const topName = simEntries[0][0];
-      affinityEl.innerHTML = simEntries.map(([name, val], i) => {
+    function renderAffinity() {
+      const el = document.getElementById('affinity-bars');
+      const sims = personality.all_similarities || {};
+      const entries = Object.entries(sims).sort((a,b) => b[1]-a[1]);
+      if (!entries.length) {
+        el.innerHTML = `<p class="text-sm text-muted">No affinity data available.</p>`; return;
+      }
+      el.innerHTML = entries.map(([name, val]) => {
         const pct   = Math.round(val * 100);
         const color = CLUSTER_COLORS[name] || '#6B7280';
         const emoji = CLUSTER_EMOJIS[name] || '';
-        const isTop = name === (personality.name || topName);
-        return `
-          <div>
-            <div class="flex justify-between items-center mb-1.5">
-              <span class="text-sm font-500 ${isTop ? 'text-text font-700' : 'text-muted'}">
-                ${emoji} ${escHtml(name)}
-              </span>
-              <span class="text-xs font-700 ${isTop ? '' : 'text-muted'}"
-                    style="${isTop ? 'color:'+color : ''}">${pct}%</span>
-            </div>
-            <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.06)">
-              <div class="h-1.5 rounded-full transition-all duration-700"
-                   style="width:${pct}%; background:${color}; opacity:${isTop ? 1 : 0.5}"></div>
-            </div>
-          </div>`;
+        const isTop = name === personality.name;
+        return `<div>
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-sm font-500 ${isTop ? 'text-text font-700' : 'text-muted'}">${emoji} ${escHtml(name)}</span>
+            <span class="text-xs font-700 ${isTop ? '' : 'text-muted'}" style="${isTop ? 'color:'+color : ''}">${pct}%</span>
+          </div>
+          <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.06)">
+            <div class="h-1.5 rounded-full transition-all duration-700"
+                 style="width:${pct}%;background:${color};opacity:${isTop ? 1 : 0.5}"></div>
+          </div>
+        </div>`;
       }).join('');
     }
 
-    // ── Personality Cluster Map (SVG) ─────────────────────────────────────────
-    async function renderClusterMap() {
-      if (!sid) { hideClusterLoading(); return; }
-      try {
-        const res = await fetch(`/api/clusters?session_id=${encodeURIComponent(sid)}`);
-        if (!res.ok) { hideClusterLoading(); return; }
-        const data = await res.json();
-        drawClusterMap(data);
-      } catch(e) {
-        hideClusterLoading();
-      }
+    // ── Initial render from localStorage ─────────────────────────────────────
+    renderHeader();
+    renderArtists();
+    renderGenreCloud();
+    renderAudioDNA({});   // placeholder bars, filled by API
+    renderTracks();
+    renderEmotions();
+    renderAffinity();
+
+    // ── Fetch missing data from API ───────────────────────────────────────────
+    // Always fetch from API to ensure fresh/complete data (localStorage may be stale or empty)
+    if (sid) {
+      // Session data: artists, tracks, genres, user
+      fetch(`/api/session/${encodeURIComponent(sid)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          let changed = false;
+          if (data.top_artists?.length) { artists = data.top_artists; localStorage.setItem(LS.artists, JSON.stringify(artists)); changed = true; }
+          if (data.top_tracks?.length)  { tracks  = data.top_tracks;  localStorage.setItem(LS.tracks,  JSON.stringify(tracks));  changed = true; }
+          if (data.all_genres?.length)  { genres  = data.all_genres;  localStorage.setItem(LS.genres,  JSON.stringify(genres));  changed = true; }
+          if (data.user?.display_name)  { user    = data.user;        localStorage.setItem(LS.user,    JSON.stringify(user));    changed = true; }
+          if (changed) { renderHeader(); renderArtists(); renderGenreCloud(); renderTracks(); }
+        })
+        .catch(() => {});
+
+      // Profile data: emotions, audio features, personality similarities
+      fetch(`/api/profile?session_id=${encodeURIComponent(sid)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          if (data.audio_features)  renderAudioDNA(data.audio_features);
+          if (data.emotion_profile && Object.keys(data.emotion_profile).length) {
+            emotions = data.emotion_profile;
+            localStorage.setItem(LS.emotions, JSON.stringify(emotions));
+            renderEmotions();
+          }
+          if (data.personality?.all_similarities) {
+            // Merge into stored personality
+            personality = { ...personality, ...data.personality };
+            localStorage.setItem(LS.personality, JSON.stringify(personality));
+            renderAffinity();
+            renderHeader();
+          }
+        })
+        .catch(() => {});
     }
 
+    // ── Personality Cluster Map (SVG) ─────────────────────────────────────────
     function hideClusterLoading() {
       document.getElementById('cluster-loading').style.display = 'none';
     }
 
     function drawClusterMap(data) {
       const { user_position, centroids, user_personality } = data;
-
-      // Update badge
       if (user_personality) {
         const badge = document.getElementById('cluster-badge');
         const color = CLUSTER_COLORS[user_personality] || '#1DB954';
         const emoji = CLUSTER_EMOJIS[user_personality] || '';
         badge.textContent = `${emoji} ${user_personality}`;
-        badge.style.color  = color;
+        badge.style.color = color;
         badge.style.background = color + '18';
         badge.style.borderColor = color + '40';
         badge.classList.remove('hidden');
       }
-
-      // Coordinate range
       const allX = [...centroids.map(c => c.x), user_position.x];
       const allY = [...centroids.map(c => c.y), user_position.y];
       const pad  = 0.5;
-      const minX = Math.min(...allX) - pad;
-      const maxX = Math.max(...allX) + pad;
-      const minY = Math.min(...allY) - pad;
-      const maxY = Math.max(...allY) + pad;
-      const rangeX = maxX - minX || 1;
-      const rangeY = maxY - minY || 1;
-
-      // Map to viewBox 0 0 100 80
+      const minX = Math.min(...allX) - pad, maxX = Math.max(...allX) + pad;
+      const minY = Math.min(...allY) - pad, maxY = Math.max(...allY) + pad;
       const W = 100, H = 80;
-      const tx = x => ((x - minX) / rangeX * W).toFixed(2);
-      const ty = y => ((1 - (y - minY) / rangeY) * H).toFixed(2);
-
-      let defs = '', blobs = '', rings = '', dots = '', labels = '';
-
+      const tx = x => ((x-minX)/(maxX-minX)*W).toFixed(2);
+      const ty = y => ((1-(y-minY)/(maxY-minY))*H).toFixed(2);
+      let defs='', blobs='', dots='', labels='';
       for (const c of centroids) {
-        const cx = tx(c.x), cy = ty(c.y);
-        const gid = 'g_' + cx.replace('.','') + cy.replace('.','');
-        defs += `<radialGradient id="${gid}" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="${c.color}" stop-opacity="0.28"/>
-          <stop offset="100%" stop-color="${c.color}" stop-opacity="0"/>
-        </radialGradient>`;
+        const cx=tx(c.x), cy=ty(c.y);
+        const gid='g'+cx.replace('.','')+'_'+cy.replace('.','');
+        defs   += `<radialGradient id="${gid}" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${c.color}" stop-opacity="0.28"/><stop offset="100%" stop-color="${c.color}" stop-opacity="0"/></radialGradient>`;
         blobs  += `<ellipse cx="${cx}" cy="${cy}" rx="10" ry="8" fill="url(#${gid})"/>`;
         dots   += `<circle cx="${cx}" cy="${cy}" r="1.1" fill="${c.color}"/>`;
-        labels += `<text x="${cx}" y="${parseFloat(cy)+4.2}" text-anchor="middle"
-                     font-family="Plus Jakarta Sans,sans-serif" font-size="2.4"
-                     fill="rgba(234,234,234,0.72)">${c.emoji} ${escHtml(c.name)}</text>`;
+        labels += `<text x="${cx}" y="${(+cy+4.2).toFixed(2)}" text-anchor="middle" font-family="Plus Jakarta Sans,sans-serif" font-size="2.4" fill="rgba(234,234,234,0.72)">${c.emoji} ${escHtml(c.name)}</text>`;
       }
-
-      // User position
-      const ux = tx(user_position.x), uy = ty(user_position.y);
-      rings = `
-        <circle cx="${ux}" cy="${uy}" r="4.5" fill="none" stroke="#1DB954" stroke-width="0.4" class="mm-pulse"/>
+      const ux=tx(user_position.x), uy=ty(user_position.y);
+      const rings=`<circle cx="${ux}" cy="${uy}" r="4.5" fill="none" stroke="#1DB954" stroke-width="0.4" class="mm-pulse"/>
         <circle cx="${ux}" cy="${uy}" r="2.8" fill="none" stroke="#1DB954" stroke-width="0.5" class="mm-pulse2"/>
         <circle cx="${ux}" cy="${uy}" r="1.4" fill="#1DB954"/>
-        <text x="${ux}" y="${parseFloat(uy)-3.2}" text-anchor="middle"
-              font-family="Plus Jakarta Sans,sans-serif" font-size="2.4" font-weight="700"
-              fill="#1DB954">You</text>`;
-
-      const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
-                        style="width:100%;height:320px;display:block">
-        <defs>${defs}</defs>
-        ${blobs}
-        ${dots}
-        ${labels}
-        ${rings}
-      </svg>`;
-
+        <text x="${ux}" y="${(+uy-3.2).toFixed(2)}" text-anchor="middle" font-family="Plus Jakarta Sans,sans-serif" font-size="2.4" font-weight="700" fill="#1DB954">You</text>`;
       document.getElementById('cluster-loading').style.display = 'none';
-      document.getElementById('cluster-map-svg').innerHTML = svg;
+      document.getElementById('cluster-map-svg').innerHTML =
+        `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:320px;display:block">
+          <defs>${defs}</defs>${blobs}${dots}${labels}${rings}</svg>`;
     }
 
-    renderClusterMap();
+    if (sid) {
+      fetch(`/api/clusters?session_id=${encodeURIComponent(sid)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) drawClusterMap(data); else hideClusterLoading(); })
+        .catch(hideClusterLoading);
+    } else {
+      hideClusterLoading();
+    }
   </script>
 
   <script>
