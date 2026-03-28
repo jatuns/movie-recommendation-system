@@ -429,13 +429,19 @@
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data) return;
-          let changed = false;
-          if (data.top_artists?.length) { artists = data.top_artists; localStorage.setItem(LS.artists, JSON.stringify(artists)); changed = true; }
-          if (data.top_tracks?.length)  { tracks  = data.top_tracks;  localStorage.setItem(LS.tracks,  JSON.stringify(tracks));  changed = true; }
-          if (data.all_genres?.length)  { genres  = data.all_genres;  localStorage.setItem(LS.genres,  JSON.stringify(genres));  changed = true; }
-          if (data.user?.display_name)  { user    = data.user;        localStorage.setItem(LS.user,    JSON.stringify(user));    changed = true; }
-          if (changed) { renderHeader(); renderArtists(); renderGenreCloud(); renderTracks(); }
-          else if (data.top_artists?.length) renderGenreCloud(); // re-render genre cloud with artist genres as fallback
+          if (data.top_artists?.length) { artists = data.top_artists; localStorage.setItem(LS.artists, JSON.stringify(artists)); }
+          if (data.top_tracks?.length)  { tracks  = data.top_tracks;  localStorage.setItem(LS.tracks,  JSON.stringify(tracks));  }
+          if (data.user?.display_name)  { user    = data.user;        localStorage.setItem(LS.user,    JSON.stringify(user));    }
+
+          // Build genres: use all_genres if non-empty, otherwise extract from each artist
+          const genreSource = (data.all_genres?.length ? data.all_genres : [])
+            .concat((data.top_artists || []).flatMap(a => Array.isArray(a.genres) ? a.genres : []));
+          if (genreSource.length) {
+            genres = [...new Set(genreSource)]; // deduplicate
+            localStorage.setItem(LS.genres, JSON.stringify(genres));
+          }
+
+          renderHeader(); renderArtists(); renderGenreCloud(); renderTracks();
         })
         .catch(() => {});
 

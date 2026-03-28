@@ -489,6 +489,22 @@ def get_session_status(session_id: str):
     """Returns which pipeline steps have been completed for a session."""
     session = _get_session(session_id)
     meta = session.get("_meta", {})
+
+    # Sanitize top_artists: ensure genres is always a plain list of strings
+    raw_artists = meta.get("top_artists", [])
+    top_artists = []
+    for a in raw_artists:
+        genres_val = a.get("genres", [])
+        if not isinstance(genres_val, list):
+            genres_val = list(genres_val) if genres_val else []
+        top_artists.append({**a, "genres": [str(g) for g in genres_val]})
+
+    # Build all_genres from meta; fall back to extracting from artists
+    all_genres = [str(g) for g in meta.get("all_genres", []) if g]
+    if not all_genres:
+        for a in top_artists:
+            all_genres.extend(a.get("genres", []))
+
     return {
         "session_id":          session_id,
         "has_spotify_data":    session["user_data"] is not None,
@@ -496,8 +512,8 @@ def get_session_status(session_id: str):
         "has_recommendations": session["recommendations"] is not None,
         "user":                meta.get("user", {}),
         "top_tracks":          meta.get("top_tracks", []),
-        "top_artists":         meta.get("top_artists", []),
-        "all_genres":          meta.get("all_genres", []),
+        "top_artists":         top_artists,
+        "all_genres":          all_genres,
     }
 
 
