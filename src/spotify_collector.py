@@ -161,36 +161,28 @@ def collect_user_data(sp: spotipy.Spotify) -> dict:
     artists = get_top_artists(sp, limit=20)
     artists_df = pd.DataFrame(artists)
 
-    # If top-artists returned empty genres (common Spotify API limitation),
-    # enrich using sp.artists() batch call with unique artist IDs from tracks
+    # Collect genres from top artists
     all_genres = []
     for row in artists:
         all_genres.extend(row.get("genres", []))
-
-    if not all_genres and "artist_id" in tracks_df.columns:
-        print("Top-artist genres empty — enriching from track artist IDs...")
-        unique_ids = [aid for aid in tracks_df["artist_id"].dropna().unique() if aid][:50]
-        # Spotify batch limit is 50 per call
-        for i in range(0, len(unique_ids), 50):
-            batch = sp.artists(unique_ids[i:i+50]).get("artists", [])
-            for a in batch:
-                if not a:
-                    continue
-                genres = a.get("genres", [])
-                all_genres.extend(genres)
-                # Patch genres back into artists list if artist matches
-                for artist_row in artists:
-                    if artist_row.get("artist_id") == a.get("id") and not artist_row.get("genres"):
-                        artist_row["genres"] = genres
-                        artist_row["genres_str"] = ", ".join(genres[:3])
-
-        # Rebuild artists_df with enriched genres
-        artists_df = pd.DataFrame(artists)
 
     # Collect all genres and estimate average features
     print("Estimating audio features from genres...")
 
     estimated_features = _estimate_features_from_genres(all_genres)
+
+    # If Spotify returned no genres (common API limitation), infer top genres
+    # from the user's estimated audio profile via feature similarity
+    if not all_genres:
+        print("No genres from Spotify — inferring from audio profile...")
+        feat_keys = ["energy", "valence", "danceability", "acousticness"]
+        user_vec = np.array([estimated_features.get(k, 0.5) for k in feat_keys])
+        scores = {}
+        for genre, gf in GENRE_FEATURE_MAP.items():
+            gvec = np.array([gf.get(k, 0.5) for k in feat_keys])
+            dist = float(np.sqrt(np.sum((user_vec - gvec) ** 2)))
+            scores[genre] = 1.0 / (1.0 + dist)
+        all_genres = sorted(scores, key=scores.__getitem__, reverse=True)[:15]
 
     # Apply estimated features to all tracks
     for col, val in estimated_features.items():
