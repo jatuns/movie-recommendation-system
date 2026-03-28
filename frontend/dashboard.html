@@ -231,7 +231,19 @@
       window.location.href = '/';
     } else {
       localStorage.setItem(LS.session, sessionId);
-      runAnalysis();
+
+      // If results are already cached, skip the loading screen entirely
+      const cachedRecs = localStorage.getItem(LS.recs);
+      const cachedUser = localStorage.getItem(LS.user);
+      if (cachedRecs && cachedUser) {
+        const recData = {
+          recommendations: JSON.parse(cachedRecs),
+          personality: JSON.parse(localStorage.getItem(LS.personality) || '{}'),
+        };
+        showResults(recData, JSON.parse(cachedUser));
+      } else {
+        runAnalysis();
+      }
     }
 
     // Step ordering for completed-steps display
