@@ -45,6 +45,9 @@
     .mm-reveal{opacity:0;transform:translateY(20px);transition:opacity .55s ease,transform .55s ease}
     .mm-reveal.mm-on{opacity:1;transform:none}
     .mm-letter{position:absolute;font-size:clamp(100px,16vw,220px);font-weight:900;opacity:.05;pointer-events:none;user-select:none;top:-.1em;right:-.05em;line-height:1;will-change:transform;color:#EAEAEA}
+    @keyframes mmPulseRing{0%,100%{opacity:.55}50%{opacity:.1}}
+    .mm-pulse{animation:mmPulseRing 2.2s ease-in-out infinite}
+    .mm-pulse2{animation:mmPulseRing 2.2s ease-in-out .7s infinite}
   </style>
 </head>
 <body class="font-sans antialiased min-h-screen flex">
@@ -102,16 +105,46 @@
         </div>
       </div>
 
+      <!-- Personality Cluster Map -->
+      <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <p class="text-xs font-700 uppercase tracking-widest text-muted">Personality Cluster Map</p>
+            <p class="text-xs text-muted mt-1">Where you fall among the 6 music personality types</p>
+          </div>
+          <span id="cluster-badge" class="hidden px-3 py-1 rounded-full text-xs font-600 border"></span>
+        </div>
+        <div id="cluster-map-wrap" class="relative w-full" style="min-height:320px">
+          <div id="cluster-loading" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <svg class="animate-spin" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#6B7280"/></svg>
+            <span class="text-sm text-muted">Loading cluster data…</span>
+          </div>
+          <div id="cluster-map-svg" class="w-full"></div>
+        </div>
+      </div>
+
+      <!-- Personality Affinity + Emotion Breakdown -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Personality Affinity -->
+        <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+          <p class="text-xs font-700 uppercase tracking-widest text-muted">Personality Affinity</p>
+          <p class="text-xs text-muted -mt-2">How close you are to each personality type</p>
+          <div id="affinity-bars" class="flex flex-col gap-4"></div>
+        </div>
+
+        <!-- Emotion Breakdown -->
+        <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+          <p class="text-xs font-700 uppercase tracking-widest text-muted">Emotion Breakdown</p>
+          <div id="emotion-breakdown" class="flex flex-col gap-3"></div>
+        </div>
+
+      </div>
+
       <!-- Top Tracks -->
       <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
         <p class="text-xs font-700 uppercase tracking-widest text-muted">Top Tracks</p>
         <div id="tracks-grid" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
-      </div>
-
-      <!-- Emotion Breakdown -->
-      <div class="mm-reveal bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
-        <p class="text-xs font-700 uppercase tracking-widest text-muted">Emotion Breakdown</p>
-        <div id="emotion-breakdown" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
       </div>
 
     </div>
@@ -354,24 +387,161 @@
     const emotionEl = document.getElementById('emotion-breakdown');
     const emotionEntries = Object.entries(emotions).sort((a,b) => b[1]-a[1]);
     if (!emotionEntries.length) {
-      emotionEl.innerHTML = `<p class="text-sm text-muted col-span-2">No emotion data available.</p>`;
+      emotionEl.innerHTML = `<p class="text-sm text-muted">No emotion data available.</p>`;
     } else {
       emotionEl.innerHTML = emotionEntries.map(([label, val]) => {
         const pct   = Math.round(val * 100);
         const color = EMOTION_COLORS[label.toLowerCase()] || '#6B7280';
         return `
-          <div class="bg-bg/40 rounded-xl p-4 flex flex-col gap-2">
-            <div class="flex justify-between items-center">
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
               <span class="text-sm font-600 capitalize text-text">${escHtml(label)}</span>
-              <span class="text-sm font-700" style="color:${color}">${pct}%</span>
+              <span class="text-xs font-700" style="color:${color}">${pct}%</span>
             </div>
-            <div class="h-2 bg-surface rounded-full overflow-hidden">
-              <div class="h-2 rounded-full transition-all duration-700"
+            <div class="h-1.5 bg-bg rounded-full overflow-hidden">
+              <div class="h-1.5 rounded-full transition-all duration-700"
                    style="width:${pct}%; background:${color}"></div>
             </div>
           </div>`;
       }).join('');
     }
+
+    // ── Personality Affinity bars ─────────────────────────────────────────────
+    const CLUSTER_COLORS = {
+      'Dark & Introspective':   '#4a4a8a',
+      'Energetic & Bold':       '#e84c3d',
+      'Feel-good & Social':     '#f39c12',
+      'Moody & Atmospheric':    '#2ecc71',
+      'Sophisticated & Complex':'#9b59b6',
+      'Calm & Reflective':      '#1abc9c',
+    };
+    const CLUSTER_EMOJIS = {
+      'Dark & Introspective':   '🖤',
+      'Energetic & Bold':       '⚡',
+      'Feel-good & Social':     '☀️',
+      'Moody & Atmospheric':    '🌙',
+      'Sophisticated & Complex':'🎭',
+      'Calm & Reflective':      '🌿',
+    };
+
+    const affinityEl = document.getElementById('affinity-bars');
+    const similarities = personality.all_similarities || {};
+    const simEntries = Object.entries(similarities).sort((a,b) => b[1]-a[1]);
+
+    if (!simEntries.length) {
+      affinityEl.innerHTML = `<p class="text-sm text-muted">No affinity data available.</p>`;
+    } else {
+      const topName = simEntries[0][0];
+      affinityEl.innerHTML = simEntries.map(([name, val], i) => {
+        const pct   = Math.round(val * 100);
+        const color = CLUSTER_COLORS[name] || '#6B7280';
+        const emoji = CLUSTER_EMOJIS[name] || '';
+        const isTop = name === (personality.name || topName);
+        return `
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <span class="text-sm font-500 ${isTop ? 'text-text font-700' : 'text-muted'}">
+                ${emoji} ${escHtml(name)}
+              </span>
+              <span class="text-xs font-700 ${isTop ? '' : 'text-muted'}"
+                    style="${isTop ? 'color:'+color : ''}">${pct}%</span>
+            </div>
+            <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,0.06)">
+              <div class="h-1.5 rounded-full transition-all duration-700"
+                   style="width:${pct}%; background:${color}; opacity:${isTop ? 1 : 0.5}"></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── Personality Cluster Map (SVG) ─────────────────────────────────────────
+    async function renderClusterMap() {
+      if (!sid) { hideClusterLoading(); return; }
+      try {
+        const res = await fetch(`/api/clusters?session_id=${encodeURIComponent(sid)}`);
+        if (!res.ok) { hideClusterLoading(); return; }
+        const data = await res.json();
+        drawClusterMap(data);
+      } catch(e) {
+        hideClusterLoading();
+      }
+    }
+
+    function hideClusterLoading() {
+      document.getElementById('cluster-loading').style.display = 'none';
+    }
+
+    function drawClusterMap(data) {
+      const { user_position, centroids, user_personality } = data;
+
+      // Update badge
+      if (user_personality) {
+        const badge = document.getElementById('cluster-badge');
+        const color = CLUSTER_COLORS[user_personality] || '#1DB954';
+        const emoji = CLUSTER_EMOJIS[user_personality] || '';
+        badge.textContent = `${emoji} ${user_personality}`;
+        badge.style.color  = color;
+        badge.style.background = color + '18';
+        badge.style.borderColor = color + '40';
+        badge.classList.remove('hidden');
+      }
+
+      // Coordinate range
+      const allX = [...centroids.map(c => c.x), user_position.x];
+      const allY = [...centroids.map(c => c.y), user_position.y];
+      const pad  = 0.5;
+      const minX = Math.min(...allX) - pad;
+      const maxX = Math.max(...allX) + pad;
+      const minY = Math.min(...allY) - pad;
+      const maxY = Math.max(...allY) + pad;
+      const rangeX = maxX - minX || 1;
+      const rangeY = maxY - minY || 1;
+
+      // Map to viewBox 0 0 100 80
+      const W = 100, H = 80;
+      const tx = x => ((x - minX) / rangeX * W).toFixed(2);
+      const ty = y => ((1 - (y - minY) / rangeY) * H).toFixed(2);
+
+      let defs = '', blobs = '', rings = '', dots = '', labels = '';
+
+      for (const c of centroids) {
+        const cx = tx(c.x), cy = ty(c.y);
+        const gid = 'g_' + cx.replace('.','') + cy.replace('.','');
+        defs += `<radialGradient id="${gid}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="${c.color}" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="${c.color}" stop-opacity="0"/>
+        </radialGradient>`;
+        blobs  += `<ellipse cx="${cx}" cy="${cy}" rx="10" ry="8" fill="url(#${gid})"/>`;
+        dots   += `<circle cx="${cx}" cy="${cy}" r="1.1" fill="${c.color}"/>`;
+        labels += `<text x="${cx}" y="${parseFloat(cy)+4.2}" text-anchor="middle"
+                     font-family="Plus Jakarta Sans,sans-serif" font-size="2.4"
+                     fill="rgba(234,234,234,0.72)">${c.emoji} ${escHtml(c.name)}</text>`;
+      }
+
+      // User position
+      const ux = tx(user_position.x), uy = ty(user_position.y);
+      rings = `
+        <circle cx="${ux}" cy="${uy}" r="4.5" fill="none" stroke="#1DB954" stroke-width="0.4" class="mm-pulse"/>
+        <circle cx="${ux}" cy="${uy}" r="2.8" fill="none" stroke="#1DB954" stroke-width="0.5" class="mm-pulse2"/>
+        <circle cx="${ux}" cy="${uy}" r="1.4" fill="#1DB954"/>
+        <text x="${ux}" y="${parseFloat(uy)-3.2}" text-anchor="middle"
+              font-family="Plus Jakarta Sans,sans-serif" font-size="2.4" font-weight="700"
+              fill="#1DB954">You</text>`;
+
+      const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
+                        style="width:100%;height:320px;display:block">
+        <defs>${defs}</defs>
+        ${blobs}
+        ${dots}
+        ${labels}
+        ${rings}
+      </svg>`;
+
+      document.getElementById('cluster-loading').style.display = 'none';
+      document.getElementById('cluster-map-svg').innerHTML = svg;
+    }
+
+    renderClusterMap();
   </script>
 
   <script>
