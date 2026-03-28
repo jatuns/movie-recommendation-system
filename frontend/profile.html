@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>musicmatch — Profile</title>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:       '#1A1A2E',
+            surface:  '#16213E',
+            surface2: '#0F3460',
+            green:    '#1DB954',
+            coral:    '#FF6B6B',
+            teal:     '#4ECDC4',
+            yellow:   '#FFE66D',
+            text:     '#EAEAEA',
+            muted:    '#6B7280',
+          },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { background-color: #1A1A2E; color: #EAEAEA; }
+    .sidebar-link { transition: all 0.15s; }
+    .sidebar-link:hover, .sidebar-link.active {
+      background: rgba(29,185,84,0.1);
+      color: #1DB954;
+      border-left-color: #1DB954;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside id="sidebar"
+    class="fixed left-0 top-0 h-full w-64 bg-surface border-r border-white/5 flex flex-col z-40">
+  </aside>
+
+  <!-- Main content -->
+  <main class="ml-64 flex-1 min-h-screen">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-white/5 px-8 py-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-700">👤 Your Profile</h1>
+          <p id="header-username" class="text-sm text-muted"></p>
+        </div>
+        <span id="personality-pill"
+          class="hidden px-3 py-1.5 rounded-full bg-green/10 border border-green/20 text-green text-sm font-600">
+        </span>
+      </div>
+    </header>
+
+    <div class="p-8 flex flex-col gap-8">
+
+      <!-- Top row: Artists + Genres/DNA -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Top Artists -->
+        <div class="bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+          <p class="text-xs font-700 uppercase tracking-widest text-muted">Top Artists</p>
+          <div id="artists-list" class="flex flex-col gap-3"></div>
+        </div>
+
+        <!-- Genre cloud + Audio DNA -->
+        <div class="flex flex-col gap-5">
+
+          <!-- Genre cloud -->
+          <div class="bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+            <p class="text-xs font-700 uppercase tracking-widest text-muted">Genre Cloud</p>
+            <div id="genre-cloud" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <!-- Audio DNA -->
+          <div class="bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+            <p class="text-xs font-700 uppercase tracking-widest text-muted">Audio DNA</p>
+            <div id="audio-dna" class="flex flex-col gap-3"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Top Tracks -->
+      <div class="bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+        <p class="text-xs font-700 uppercase tracking-widest text-muted">Top Tracks</p>
+        <div id="tracks-grid" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+      </div>
+
+      <!-- Emotion Breakdown -->
+      <div class="bg-surface border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+        <p class="text-xs font-700 uppercase tracking-widest text-muted">Emotion Breakdown</p>
+        <div id="emotion-breakdown" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // ── LocalStorage keys ──────────────────────────────────────────────────────
+    const LS = {
+      session:     'mmSessionId',
+      user:        'mmUser',
+      personality: 'mmPersonality',
+      recs:        'mmRecommendations',
+      emotions:    'mmEmotionProfile',
+      genres:      'mmAllGenres',
+      artists:     'mmArtists',
+      tracks:      'mmTracks',
+    };
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function disconnect() {
+      Object.values(LS).forEach(k => localStorage.removeItem(k));
+      window.location.href = '/';
+    }
+
+    function renderSidebar(activePage) {
+      const user = JSON.parse(localStorage.getItem(LS.user) || '{}');
+      const name = user.display_name || 'Music Fan';
+      const sid  = localStorage.getItem(LS.session) || '';
+      const el   = document.getElementById('sidebar');
+      if (!el) return;
+      el.innerHTML = `
+        <div class="p-6 flex flex-col gap-6 flex-1 overflow-y-auto">
+          <a href="/" class="text-lg font-800 tracking-tight">
+            music<em class="text-green not-italic">match</em>
+          </a>
+          <div class="flex items-center gap-3 px-3 py-3 bg-bg/40 rounded-xl">
+            <div class="w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0">
+              ${name.charAt(0).toUpperCase()}
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-600 text-text truncate">${escHtml(name)}</p>
+              <p class="text-xs text-muted truncate">Spotify</p>
+            </div>
+          </div>
+          <nav class="flex flex-col gap-1">
+            <a href="/dashboard?session_id=${escHtml(sid)}"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='dashboard'?'active':''}">
+              <span>🏠</span> Dashboard
+            </a>
+            <a href="/profile.html?session_id=${escHtml(sid)}"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='profile'?'active':''}">
+              <span>👤</span> Profile
+            </a>
+            <a href="/history.html"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='history'?'active':''}">
+              <span>📚</span> History
+            </a>
+          </nav>
+          <div class="mt-auto pt-4 border-t border-white/5">
+            <button onclick="disconnect()"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-500 text-muted hover:text-coral hover:bg-coral/10 transition-colors">
+              <span>🚪</span> Disconnect
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const sid    = params.get('session_id') || localStorage.getItem(LS.session);
+    if (sid) localStorage.setItem(LS.session, sid);
+
+    renderSidebar('profile');
+
+    const user        = JSON.parse(localStorage.getItem(LS.user)        || '{}');
+    const personality = JSON.parse(localStorage.getItem(LS.personality) || '{}');
+    const emotions    = JSON.parse(localStorage.getItem(LS.emotions)    || '{}');
+    const genres      = JSON.parse(localStorage.getItem(LS.genres)      || '[]');
+    const artists     = JSON.parse(localStorage.getItem(LS.artists)     || '[]');
+    const tracks      = JSON.parse(localStorage.getItem(LS.tracks)      || '[]');
+
+    // Header
+    document.getElementById('header-username').textContent =
+      user.display_name ? `@${user.display_name}` : '';
+
+    const pill = document.getElementById('personality-pill');
+    if (personality.name) {
+      pill.textContent = `${personality.emoji || ''} ${personality.name}`;
+      pill.classList.remove('hidden');
+    }
+
+    // ── Artists list ──────────────────────────────────────────────────────────
+    const artistsEl = document.getElementById('artists-list');
+    if (!artists.length) {
+      artistsEl.innerHTML = `<p class="text-sm text-muted">No artist data available.</p>`;
+    } else {
+      artistsEl.innerHTML = artists.slice(0, 10).map((a, i) => {
+        const genreChips = (a.genres || []).slice(0, 3).map(g =>
+          `<span class="px-1.5 py-0.5 rounded-md bg-teal/10 border border-teal/20 text-teal text-xs">
+            ${escHtml(g)}
+          </span>`
+        ).join('');
+        return `
+          <div class="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+            <span class="text-xs font-700 text-muted w-5 text-right">${i+1}</span>
+            <div class="w-8 h-8 rounded-full bg-teal/15 flex items-center justify-center text-teal font-700 text-xs flex-shrink-0">
+              ${escHtml((a.artist_name||'?').charAt(0).toUpperCase())}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-600 text-text truncate">${escHtml(a.artist_name || '')}</p>
+              <div class="flex flex-wrap gap-1 mt-1">${genreChips}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── Genre cloud ───────────────────────────────────────────────────────────
+    const genreEl = document.getElementById('genre-cloud');
+    if (!genres.length) {
+      genreEl.innerHTML = `<p class="text-sm text-muted">No genre data available.</p>`;
+    } else {
+      // Count frequencies
+      const freq = {};
+      genres.forEach(g => { freq[g] = (freq[g] || 0) + 1; });
+      const sorted = Object.entries(freq).sort((a,b) => b[1]-a[1]);
+      const maxFreq = sorted[0]?.[1] || 1;
+
+      genreEl.innerHTML = sorted.map(([g, cnt]) => {
+        const ratio   = cnt / maxFreq;
+        const opacity = 0.4 + ratio * 0.6;
+        const size    = ratio > 0.7 ? 'text-base' : ratio > 0.4 ? 'text-sm' : 'text-xs';
+        return `
+          <span class="${size} font-500 px-3 py-1.5 rounded-full border border-coral/20 cursor-default"
+                style="color: #FF6B6B; background: rgba(255,107,107,${(opacity * 0.15).toFixed(2)}); opacity: ${opacity.toFixed(2)}">
+            ${escHtml(g)}
+          </span>`;
+      }).join('');
+    }
+
+    // ── Audio DNA ─────────────────────────────────────────────────────────────
+    const audioMetrics = [
+      { key: 'energy',       label: 'Energy',       color: '#1DB954' },
+      { key: 'valence',      label: 'Valence',       color: '#FFE66D' },
+      { key: 'danceability', label: 'Danceability',  color: '#4ECDC4' },
+      { key: 'acousticness', label: 'Acousticness',  color: '#FF6B6B' },
+    ];
+
+    // Try to pull audio features from localStorage personality (they may not be stored)
+    // Fall back gracefully with empty bars
+    const audioEl = document.getElementById('audio-dna');
+    // We'll fetch from session if needed — for now render from what we have
+    const storedPersonality = personality || {};
+    const audioFeatures     = storedPersonality.audio_features || {};
+
+    audioEl.innerHTML = audioMetrics.map(({ key, label, color }) => {
+      const val = audioFeatures[key];
+      const pct = val != null ? Math.round(val * 100) : null;
+      return `
+        <div>
+          <div class="flex justify-between text-xs mb-1.5">
+            <span class="text-text">${label}</span>
+            <span style="color:${color}" class="font-600">${pct != null ? pct+'%' : '—'}</span>
+          </div>
+          <div class="h-2 bg-bg rounded-full overflow-hidden">
+            <div class="h-2 rounded-full transition-all duration-700"
+                 style="width:${pct != null ? pct : 0}%; background:${color}"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Fetch audio features from API to fill in DNA bars
+    if (sid) {
+      fetch(`/api/profile?session_id=${sid}`)
+        .then(r => r.json())
+        .then(data => {
+          const af = data.audio_features || {};
+          audioEl.innerHTML = audioMetrics.map(({ key, label, color }) => {
+            const val = af[key];
+            const pct = val != null ? Math.round(val * 100) : null;
+            return `
+              <div>
+                <div class="flex justify-between text-xs mb-1.5">
+                  <span class="text-text">${label}</span>
+                  <span style="color:${color}" class="font-600">${pct != null ? pct+'%' : '—'}</span>
+                </div>
+                <div class="h-2 bg-bg rounded-full overflow-hidden">
+                  <div class="h-2 rounded-full transition-all duration-700"
+                       style="width:${pct != null ? pct : 0}%; background:${color}"></div>
+                </div>
+              </div>`;
+          }).join('');
+        })
+        .catch(() => {});
+    }
+
+    // ── Top Tracks ────────────────────────────────────────────────────────────
+    const tracksEl = document.getElementById('tracks-grid');
+    if (!tracks.length) {
+      tracksEl.innerHTML = `<p class="text-sm text-muted col-span-2">No track data available.</p>`;
+    } else {
+      tracksEl.innerHTML = tracks.slice(0, 20).map((t, i) => `
+        <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-bg/40 transition-colors">
+          <span class="text-xs font-700 text-muted w-5 text-right flex-shrink-0">${i+1}</span>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+               style="background: linear-gradient(135deg, rgba(29,185,84,0.15), rgba(15,52,96,0.6))">
+            🎵
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-600 text-text truncate">${escHtml(t.track_name || '')}</p>
+            <p class="text-xs text-muted truncate">${escHtml(t.artist_name || '')}</p>
+          </div>
+        </div>`
+      ).join('');
+    }
+
+    // ── Emotion Breakdown ─────────────────────────────────────────────────────
+    const EMOTION_COLORS = {
+      joy:      '#1DB954',
+      sadness:  '#4ECDC4',
+      anger:    '#FF6B6B',
+      fear:     '#FFE66D',
+      love:     '#FF6B6B',
+      surprise: '#FFE66D',
+      neutral:  '#6B7280',
+      disgust:  '#FF6B6B',
+      optimism: '#1DB954',
+    };
+
+    const emotionEl = document.getElementById('emotion-breakdown');
+    const emotionEntries = Object.entries(emotions).sort((a,b) => b[1]-a[1]);
+    if (!emotionEntries.length) {
+      emotionEl.innerHTML = `<p class="text-sm text-muted col-span-2">No emotion data available.</p>`;
+    } else {
+      emotionEl.innerHTML = emotionEntries.map(([label, val]) => {
+        const pct   = Math.round(val * 100);
+        const color = EMOTION_COLORS[label.toLowerCase()] || '#6B7280';
+        return `
+          <div class="bg-bg/40 rounded-xl p-4 flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-600 capitalize text-text">${escHtml(label)}</span>
+              <span class="text-sm font-700" style="color:${color}">${pct}%</span>
+            </div>
+            <div class="h-2 bg-surface rounded-full overflow-hidden">
+              <div class="h-2 rounded-full transition-all duration-700"
+                   style="width:${pct}%; background:${color}"></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  </script>
+</body>
+</html>

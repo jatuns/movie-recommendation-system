@@ -20,14 +20,17 @@ Run with:
   uvicorn api:app --reload --port 8000
 """
 
+import asyncio
 import os
 import sys
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -74,6 +77,80 @@ _sessions: dict[str, dict] = {}
 # ── Global ML caches (loaded once, reused across requests) ──────────────────
 _movies: list | None = None
 _embeddings: Any = None   # numpy array, loaded lazily
+
+# ── Background analysis pipeline ─────────────────────────────────────────────
+_analysis_status: dict = {}
+_executor = ThreadPoolExecutor(max_workers=2)
+
+_step_messages = {
+    "lyrics":       "Fetching lyrics from Genius API...",
+    "emotions":     "Analyzing emotions with HuggingFace...",
+    "personality":  "Determining your music personality...",
+    "movies":       "Loading 5,000+ movies...",
+    "explanations": "Writing AI explanations with Groq...",
+    "complete":     "Analysis complete!",
+    "error":        "Analysis failed.",
+}
+
+
+def _update_status(sid: str, step: str, pct: int, done: bool = False, error: str | None = None):
+    _analysis_status[sid] = {
+        "step":    step,
+        "pct":     pct,
+        "done":    done,
+        "message": _step_messages.get(step, step),
+        "error":   error,
+    }
+
+
+def _run_pipeline(session_id: str):
+    global _movies, _embeddings
+    session = _sessions.get(session_id)
+    if not session:
+        return
+    try:
+        _update_status(session_id, "lyrics", 10)
+        user_data = session["user_data"]
+        tracks_with_lyrics = fetch_lyrics_for_tracks(user_data["tracks_df"], top_n=20)
+
+        _update_status(session_id, "emotions", 40)
+        emotion_profile = compute_emotion_profile(tracks_with_lyrics)
+        feature_vector = build_user_feature_vector(user_data["tracks_df"], emotion_profile)
+        session["emotion_profile"] = emotion_profile
+        session["feature_vector"] = feature_vector
+
+        _update_status(session_id, "personality", 62)
+        personality = assign_personality(feature_vector)
+        session["personality"] = personality
+
+        _update_status(session_id, "movies", 72)
+        if _movies is None:
+            _movies = fetch_movies(total=5000)
+        if _embeddings is None:
+            _embeddings = load_or_build_embeddings(_movies)
+        raw_recs = recommend_movies(personality["mood_description"], _movies, _embeddings, top_n=10)
+
+        _update_status(session_id, "explanations", 88)
+        top_artists = user_data["artists_df"]["artist_name"].tolist()[:5]
+        recommendations = explain_all_recommendations(personality, emotion_profile, raw_recs, top_artists)
+        session["recommendations"] = recommendations
+
+        try:
+            user_info = user_data["user_info"]
+            save_session(
+                user_info["user_id"] or "anonymous",
+                user_info["display_name"],
+                personality,
+                recommendations,
+                emotion_profile,
+                user_data.get("all_genres", []),
+            )
+        except Exception:
+            pass
+
+        _update_status(session_id, "complete", 100, done=True)
+    except Exception as e:
+        _update_status(session_id, "error", 0, done=True, error=str(e))
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -147,13 +224,11 @@ def start_auth():
 @app.get("/api/callback")
 def callback(
     code: str = Query(..., description="Authorization code returned by Spotify"),
-    redirect_frontend: bool = Query(False, description="If true, redirect to localhost:3000/dashboard"),
 ):
     """
     Exchanges the Spotify authorization code for an access token,
-    fetches the user's Spotify data, and creates a session.
-
-    Returns session_id — store this in the frontend and pass it to all other endpoints.
+    fetches the user's Spotify data, creates a session, and redirects
+    the browser to /dashboard?session_id=<id>.
     """
     try:
         token_info = exchange_code_for_token(code)
@@ -168,45 +243,26 @@ def callback(
 
     session_id = str(uuid.uuid4())
     _sessions[session_id] = {
-        "token_info":    token_info,
-        "user_data":     user_data,
-        "emotion_profile":  None,
-        "feature_vector":   None,
-        "personality":      None,
-        "recommendations":  None,
+        "token_info":      token_info,
+        "user_data":       user_data,
+        "emotion_profile": None,
+        "feature_vector":  None,
+        "personality":     None,
+        "recommendations": None,
     }
 
-    user_info = user_data["user_info"]
-    tracks = (
-        user_data["tracks_df"][["track_name", "artist_name"]]
-        .head(20)
-        .to_dict("records")
-    )
-    artists = (
-        user_data["artists_df"][["artist_name", "genres"]]
-        .head(20)
-        .to_dict("records")
-    )
-
-    payload = {
-        "session_id": session_id,
-        "user": {
-            "display_name": user_info["display_name"],
-            "user_id":      user_info["user_id"],
-            "country":      user_info.get("country", ""),
-        },
+    # Store extra user context in the session so the dashboard can read it
+    user_info  = user_data["user_info"]
+    tracks     = user_data["tracks_df"][["track_name", "artist_name"]].head(20).to_dict("records")
+    artists    = user_data["artists_df"][["artist_name", "genres"]].head(20).to_dict("records")
+    _sessions[session_id]["_meta"] = {
+        "user":        {"display_name": user_info["display_name"], "user_id": user_info["user_id"]},
         "top_tracks":  tracks,
         "top_artists": artists,
         "all_genres":  user_data.get("all_genres", []),
     }
 
-    if redirect_frontend:
-        # Redirect to frontend with session_id in query string
-        return RedirectResponse(
-            url=f"http://localhost:3000/dashboard?session_id={session_id}"
-        )
-
-    return payload
+    return RedirectResponse(url=f"/dashboard?session_id={session_id}")
 
 
 # ── Profile (NLP + ML pipeline) ──────────────────────────────────────────────
@@ -376,22 +432,76 @@ def get_history(user_id: str):
     return {"user_id": user_id, "sessions": history, "count": len(history)}
 
 
+# ── Background analysis pipeline endpoints ────────────────────────────────────
+
+@app.post("/api/analyze")
+async def start_analysis(session_id: str = Query(...)):
+    """Kicks off the background analysis pipeline for a session."""
+    session = _get_session(session_id)
+    if session.get("recommendations") is not None:
+        _update_status(session_id, "complete", 100, done=True)
+        return {"status": "already_done"}
+    _update_status(session_id, "lyrics", 0)
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(_executor, _run_pipeline, session_id)
+    return {"status": "started"}
+
+
+@app.get("/api/analyze/status")
+def get_analysis_status(session_id: str = Query(...)):
+    """Returns the current progress of the background analysis pipeline."""
+    _get_session(session_id)
+    return _analysis_status.get(
+        session_id,
+        {"step": "not_started", "pct": 0, "done": False, "message": "Not started", "error": None},
+    )
+
+
 # ── Session info ──────────────────────────────────────────────────────────────
 
 @app.get("/api/session/{session_id}")
 def get_session_status(session_id: str):
     """Returns which pipeline steps have been completed for a session."""
     session = _get_session(session_id)
+    meta = session.get("_meta", {})
     return {
-        "session_id":       session_id,
-        "has_spotify_data": session["user_data"] is not None,
-        "has_profile":      session["personality"] is not None,
+        "session_id":          session_id,
+        "has_spotify_data":    session["user_data"] is not None,
+        "has_profile":         session["personality"] is not None,
         "has_recommendations": session["recommendations"] is not None,
-        "user_display_name": (
-            session["user_data"]["user_info"]["display_name"]
-            if session["user_data"] else None
-        ),
+        "user":                meta.get("user", {}),
+        "top_tracks":          meta.get("top_tracks", []),
+        "top_artists":         meta.get("top_artists", []),
+        "all_genres":          meta.get("all_genres", []),
     }
+
+
+# ── Frontend page routes ──────────────────────────────────────────────────────
+
+import os as _os
+from fastapi.responses import FileResponse as _FileResponse
+
+_frontend = _os.path.join(_os.path.dirname(__file__), "frontend")
+
+
+@app.get("/dashboard")
+def serve_dashboard():
+    return _FileResponse(_os.path.join(_frontend, "dashboard.html"))
+
+
+@app.get("/movie")
+def serve_movie():
+    return _FileResponse(_os.path.join(_frontend, "movie.html"))
+
+
+@app.get("/profile")
+def serve_profile():
+    return _FileResponse(_os.path.join(_frontend, "profile.html"))
+
+
+@app.get("/history")
+def serve_history():
+    return _FileResponse(_os.path.join(_frontend, "history.html"))
 
 
 # ── Dev entrypoint ────────────────────────────────────────────────────────────
@@ -399,3 +509,7 @@ def get_session_status(session_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
+
+# ── Static frontend (must be last — catches all unmatched routes) ─────────────
+if _os.path.exists(_frontend):
+    app.mount("/", StaticFiles(directory=_frontend, html=True), name="frontend")

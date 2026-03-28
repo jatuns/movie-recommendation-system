@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>musicmatch — Movie Detail</title>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:       '#1A1A2E',
+            surface:  '#16213E',
+            surface2: '#0F3460',
+            green:    '#1DB954',
+            coral:    '#FF6B6B',
+            teal:     '#4ECDC4',
+            yellow:   '#FFE66D',
+            text:     '#EAEAEA',
+            muted:    '#6B7280',
+          },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { background-color: #1A1A2E; color: #EAEAEA; }
+    .sidebar-link { transition: all 0.15s; }
+    .sidebar-link:hover, .sidebar-link.active {
+      background: rgba(29,185,84,0.1);
+      color: #1DB954;
+      border-left-color: #1DB954;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside id="sidebar"
+    class="fixed left-0 top-0 h-full w-64 bg-surface border-r border-white/5 flex flex-col z-40">
+  </aside>
+
+  <!-- Main content -->
+  <main class="ml-64 flex-1 min-h-screen">
+
+    <!-- Top bar with back button -->
+    <header class="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-white/5 px-8 py-4">
+      <a id="back-btn" href="#"
+         class="inline-flex items-center gap-2 text-sm text-muted hover:text-text transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Dashboard
+      </a>
+    </header>
+
+    <!-- Movie content -->
+    <div class="p-8 max-w-5xl">
+
+      <!-- Not found state -->
+      <div id="not-found" class="hidden text-center py-24">
+        <p class="text-4xl mb-4">🎬</p>
+        <h2 class="text-xl font-700 mb-2">Movie not found</h2>
+        <p class="text-muted mb-6">This movie doesn't seem to exist in your recommendations.</p>
+        <a id="not-found-back" href="#" class="text-green hover:underline text-sm">
+          Back to Dashboard
+        </a>
+      </div>
+
+      <!-- Movie detail -->
+      <div id="movie-detail" class="hidden">
+
+        <!-- Two-col layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-[288px_1fr] gap-10">
+
+          <!-- Left: Poster -->
+          <div class="flex flex-col gap-4">
+            <div id="poster-container" class="w-72 rounded-2xl overflow-hidden shadow-2xl">
+              <!-- Poster image or fallback injected here -->
+            </div>
+            <!-- Match score -->
+            <div class="bg-surface border border-white/5 rounded-xl p-4 flex flex-col gap-3">
+              <p class="text-xs font-700 uppercase tracking-widest text-muted">Match Details</p>
+              <div>
+                <div class="flex justify-between text-sm mb-1.5">
+                  <span class="text-text">Overall match</span>
+                  <span id="match-pct" class="text-green font-600"></span>
+                </div>
+                <div class="h-2 bg-bg rounded-full overflow-hidden">
+                  <div id="match-bar" class="h-2 bg-green rounded-full transition-all duration-700"></div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-muted">IMDb rating</span>
+                <span id="rating-val" class="text-yellow font-600"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Details -->
+          <div class="flex flex-col gap-6">
+
+            <!-- Title block -->
+            <div>
+              <div class="flex flex-wrap items-center gap-2 mb-2">
+                <span id="release-year" class="text-xs text-muted bg-surface px-2 py-1 rounded-md border border-white/5"></span>
+              </div>
+              <h1 id="movie-title" class="text-3xl lg:text-4xl font-800 leading-tight mb-3"></h1>
+              <!-- Genre pills -->
+              <div id="genre-pills" class="flex flex-wrap gap-2 mb-4"></div>
+              <!-- Stat badges -->
+              <div class="flex items-center gap-3">
+                <span id="star-badge"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow/10 border border-yellow/20 text-yellow text-sm font-600">
+                </span>
+                <span id="pct-badge"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green/10 border border-green/20 text-green text-sm font-600">
+                </span>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-white/5"></div>
+
+            <!-- Why this film -->
+            <div>
+              <p class="text-xs font-700 uppercase tracking-widest text-muted mb-3">Why this film?</p>
+              <div class="bg-green/5 border border-green/15 rounded-xl p-5">
+                <p id="explanation"
+                   class="text-sm text-text leading-relaxed italic opacity-90"></p>
+              </div>
+            </div>
+
+            <!-- Overview -->
+            <div>
+              <p class="text-xs font-700 uppercase tracking-widest text-muted mb-3">Overview</p>
+              <p id="overview" class="text-sm text-muted leading-relaxed"></p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Other recommendations -->
+        <div class="mt-12 pt-8 border-t border-white/5">
+          <h2 class="text-lg font-700 mb-5">More Recommendations</h2>
+          <div id="other-movies" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3"></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ── LocalStorage keys ──────────────────────────────────────────────────────
+    const LS = {
+      session:     'mmSessionId',
+      user:        'mmUser',
+      personality: 'mmPersonality',
+      recs:        'mmRecommendations',
+      emotions:    'mmEmotionProfile',
+      genres:      'mmAllGenres',
+      artists:     'mmArtists',
+      tracks:      'mmTracks',
+    };
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function disconnect() {
+      Object.values(LS).forEach(k => localStorage.removeItem(k));
+      window.location.href = '/';
+    }
+
+    function renderSidebar(activePage) {
+      const user = JSON.parse(localStorage.getItem(LS.user) || '{}');
+      const name = user.display_name || 'Music Fan';
+      const sid  = localStorage.getItem(LS.session) || '';
+      const el   = document.getElementById('sidebar');
+      if (!el) return;
+      el.innerHTML = `
+        <div class="p-6 flex flex-col gap-6 flex-1 overflow-y-auto">
+          <a href="/" class="text-lg font-800 tracking-tight">
+            music<em class="text-green not-italic">match</em>
+          </a>
+          <div class="flex items-center gap-3 px-3 py-3 bg-bg/40 rounded-xl">
+            <div class="w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0">
+              ${name.charAt(0).toUpperCase()}
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-600 text-text truncate">${escHtml(name)}</p>
+              <p class="text-xs text-muted truncate">Spotify</p>
+            </div>
+          </div>
+          <nav class="flex flex-col gap-1">
+            <a href="/dashboard?session_id=${escHtml(sid)}"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='dashboard'?'active':''}">
+              <span>🏠</span> Dashboard
+            </a>
+            <a href="/profile.html?session_id=${escHtml(sid)}"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='profile'?'active':''}">
+              <span>👤</span> Profile
+            </a>
+            <a href="/history.html"
+               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-transparent text-sm font-500 text-muted ${activePage==='history'?'active':''}">
+              <span>📚</span> History
+            </a>
+          </nav>
+          <div class="mt-auto pt-4 border-t border-white/5">
+            <button onclick="disconnect()"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-500 text-muted hover:text-coral hover:bg-coral/10 transition-colors">
+              <span>🚪</span> Disconnect
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const sid    = params.get('session_id') || localStorage.getItem(LS.session);
+    const idx    = parseInt(params.get('idx') || '0', 10);
+
+    if (sid) localStorage.setItem(LS.session, sid);
+
+    const dashUrl  = `/dashboard?session_id=${encodeURIComponent(sid || '')}`;
+    document.getElementById('back-btn').href       = dashUrl;
+    document.getElementById('not-found-back').href = dashUrl;
+
+    renderSidebar('dashboard');
+
+    const recs = JSON.parse(localStorage.getItem(LS.recs) || '[]');
+
+    if (!recs.length || idx < 0 || idx >= recs.length) {
+      document.getElementById('not-found').classList.remove('hidden');
+    } else {
+      renderMovie(recs[idx], idx, recs);
+    }
+
+    const GRADIENTS = [
+      '#1DB954, #0F3460','#FF6B6B, #1A1A2E','#4ECDC4, #16213E',
+      '#FFE66D, #0F3460','#1DB954, #16213E','#FF6B6B, #0F3460',
+      '#4ECDC4, #1A1A2E','#FFE66D, #16213E','#1DB954, #1A1A2E','#FF6B6B, #16213E',
+    ];
+    function posterGradient(i) { return GRADIENTS[i % GRADIENTS.length]; }
+
+    function renderMovie(m, i, allMovies) {
+      document.title = `musicmatch — ${m.title}`;
+      document.getElementById('movie-detail').classList.remove('hidden');
+
+      const pct = Math.round((m.similarity_score || 0) * 100);
+
+      // Poster
+      const pc = document.getElementById('poster-container');
+      if (m.poster_url) {
+        pc.innerHTML = `
+          <img src="${escHtml(m.poster_url)}" alt="${escHtml(m.title)}"
+               class="w-full h-auto object-cover"
+               onerror="this.parentElement.innerHTML = fallbackPoster(${i})">`;
+      } else {
+        pc.innerHTML = fallbackPoster(i);
+      }
+
+      // Text fields
+      document.getElementById('movie-title').textContent  = m.title;
+      document.getElementById('release-year').textContent = m.release_year || '';
+      document.getElementById('explanation').textContent  = m.explanation || 'No explanation available.';
+      document.getElementById('overview').textContent     = m.overview    || 'No overview available.';
+
+      // Badges
+      document.getElementById('star-badge').textContent  = `★ ${(m.vote_average||0).toFixed(1)}`;
+      document.getElementById('pct-badge').textContent   = `🎯 ${pct}% match`;
+      document.getElementById('rating-val').textContent  = `★ ${(m.vote_average||0).toFixed(1)}`;
+      document.getElementById('match-pct').textContent   = `${pct}%`;
+      document.getElementById('match-bar').style.width   = pct + '%';
+
+      // Genres
+      const gContainer = document.getElementById('genre-pills');
+      gContainer.innerHTML = (m.genres||[]).map(g =>
+        `<span class="px-3 py-1 rounded-full bg-coral/10 border border-coral/20 text-coral text-xs font-500">
+          ${escHtml(g)}
+        </span>`
+      ).join('');
+
+      // Other movies
+      const others = allMovies.filter((_,j) => j !== i).slice(0, 5);
+      const oc = document.getElementById('other-movies');
+      oc.innerHTML = others.map((om, j) => {
+        const realIdx = allMovies.indexOf(om);
+        const opct = Math.round((om.similarity_score||0)*100);
+        return `
+          <a href="/movie.html?session_id=${encodeURIComponent(sid||'')}&idx=${realIdx}"
+             class="flex flex-col gap-2 cursor-pointer group">
+            <div class="rounded-xl overflow-hidden aspect-[2/3] relative">
+              ${om.poster_url
+                ? `<img src="${escHtml(om.poster_url)}" alt="${escHtml(om.title)}"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">`
+                : ''}
+              <div class="${om.poster_url ? 'hidden' : 'flex'} w-full h-full items-center justify-center text-3xl"
+                   style="background: linear-gradient(135deg, ${posterGradient(realIdx)})">🎬</div>
+              <div class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-md bg-green/90 text-bg text-xs font-700">
+                ${opct}%
+              </div>
+            </div>
+            <p class="text-xs font-600 text-text truncate group-hover:text-green transition-colors">
+              ${escHtml(om.title)}
+            </p>
+          </a>`;
+      }).join('');
+    }
+
+    function fallbackPoster(i) {
+      return `<div class="w-full h-96 flex items-center justify-center text-5xl"
+                   style="background: linear-gradient(135deg, ${posterGradient(i)})">🎬</div>`;
+    }
+  </script>
+</body>
+</html>
