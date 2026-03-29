@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from spotipy.cache_handler import MemoryCacheHandler
 import pandas as pd
 import numpy as np
 from dotenv import load_dotenv
@@ -92,8 +93,9 @@ def get_auth_url() -> str:
     auth_manager = SpotifyOAuth(
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8501/callback"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8501/"),
         scope=SCOPE,
+        cache_handler=MemoryCacheHandler(),
         show_dialog=True,
     )
     return auth_manager.get_authorize_url()
@@ -103,8 +105,9 @@ def exchange_code_for_token(code: str) -> dict:
     auth_manager = SpotifyOAuth(
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8501/callback"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8501/"),
         scope=SCOPE,
+        cache_handler=MemoryCacheHandler(),
     )
     return auth_manager.get_access_token(code, as_dict=True)
 
