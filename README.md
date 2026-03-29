@@ -1,3 +1,13 @@
+---
+title: musicmatch
+emoji: 🎬
+colorFrom: green
+colorTo: purple
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # musicmatch
 
 A full-stack data science app that analyzes your Spotify listening history, builds a music personality profile, and recommends movies that match your taste.
