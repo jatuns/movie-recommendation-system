@@ -10,3 +10,6 @@ venv/
 
 # User history is private — do not commit
 data/history/
+
+# Built on first run — too large for git
+data/movie_embeddings.npy
