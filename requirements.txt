@@ -1,3 +1,6 @@
+# CPU-only PyTorch — avoids downloading 2GB CUDA libraries on deployment
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 # Web App
 streamlit>=1.32.0
 

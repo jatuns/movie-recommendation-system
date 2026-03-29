@@ -4,9 +4,9 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
-data/
-models/
-*.npy
-*.pkl
 venv/
 .venv/
+.cache/
+
+# User history is private — do not commit
+data/history/
