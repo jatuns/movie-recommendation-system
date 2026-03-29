@@ -106,9 +106,9 @@
                   <div id="match-bar" class="h-2 bg-green rounded-full transition-all duration-700"></div>
                 </div>
               </div>
-              <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2 text-sm">
+                <span id="rating-val" class="text-yellow font-700"></span>
                 <span class="text-muted">IMDb rating</span>
-                <span id="rating-val" class="text-yellow font-600"></span>
               </div>
             </div>
           </div>
@@ -121,11 +121,13 @@
               <div class="flex flex-wrap items-center gap-2 mb-2">
                 <span id="release-year" class="text-xs text-muted bg-surface px-2 py-1 rounded-md border border-white/5"></span>
               </div>
-              <h1 id="movie-title" class="text-3xl lg:text-4xl font-800 leading-tight mb-3"></h1>
-              <!-- Genre pills -->
-              <div id="genre-pills" class="flex flex-wrap gap-2 mb-4"></div>
-              <!-- Stat badges -->
-              <div class="flex items-center gap-3">
+              <h1 id="movie-title" class="text-3xl lg:text-4xl font-800 leading-tight mb-4"></h1>
+              <!-- Stat badges: genre · IMDB · match% -->
+              <div class="flex items-center gap-3 flex-wrap">
+                <span id="genre-badge"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-600"
+                  style="background:rgba(255,107,107,0.12);color:#FF6B6B;border:1px solid rgba(255,107,107,0.25)">
+                </span>
                 <span id="star-badge"
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow/10 border border-yellow/20 text-yellow text-sm font-600">
                 </span>
@@ -133,6 +135,8 @@
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green/10 border border-green/20 text-green text-sm font-600">
                 </span>
               </div>
+              <!-- Remaining genre pills -->
+              <div id="genre-pills" class="flex flex-wrap gap-2 mt-3"></div>
             </div>
 
             <!-- Divider -->
@@ -207,9 +211,11 @@
             music<em class="text-green not-italic">match</em>
           </a>
           <div class="flex items-center gap-3 px-3 py-3 bg-bg/40 rounded-xl">
-            <div class="w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0">
-              ${name.charAt(0).toUpperCase()}
-            </div>
+            ${user.image_url
+              ? `<img src="${escHtml(user.image_url)}" class="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                      onerror="this.outerHTML='<div class=\\'w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0\\'>${name.charAt(0).toUpperCase()}</div>'">`
+              : `<div class="w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0">${name.charAt(0).toUpperCase()}</div>`
+            }
             <div class="min-w-0">
               <p class="text-sm font-600 text-text truncate">${escHtml(name)}</p>
               <p class="text-xs text-muted truncate">Spotify</p>
@@ -297,9 +303,17 @@
       document.getElementById('match-pct').textContent   = `${pct}%`;
       document.getElementById('match-bar').style.width   = pct + '%';
 
-      // Genres
+      // Genre badge (first genre) + remaining pills
+      const genres = m.genres || [];
+      const genreBadge = document.getElementById('genre-badge');
+      if (genres[0]) {
+        genreBadge.textContent = genres[0];
+        genreBadge.style.display = '';
+      } else {
+        genreBadge.style.display = 'none';
+      }
       const gContainer = document.getElementById('genre-pills');
-      gContainer.innerHTML = (m.genres||[]).map(g =>
+      gContainer.innerHTML = genres.slice(1).map(g =>
         `<span class="px-3 py-1 rounded-full bg-coral/10 border border-coral/20 text-coral text-xs font-500">
           ${escHtml(g)}
         </span>`
