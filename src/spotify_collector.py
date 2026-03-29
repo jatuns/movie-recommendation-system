@@ -194,6 +194,9 @@ def collect_user_data(sp: spotipy.Spotify) -> dict:
     tracks_df["speechiness"] = 0.1
     tracks_df["loudness"] = -8.0
 
+    profile_images = user_info.get("images", [])
+    profile_image  = profile_images[0]["url"] if profile_images else None
+
     return {
         "tracks_df": tracks_df,
         "artists_df": artists_df,
@@ -201,6 +204,7 @@ def collect_user_data(sp: spotipy.Spotify) -> dict:
             "display_name": user_info.get("display_name", "User"),
             "user_id": user_info.get("id"),
             "country": user_info.get("country"),
+            "image_url": profile_image,
         },
         "all_genres": all_genres,
     }

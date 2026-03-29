@@ -208,9 +208,11 @@
             music<em class="text-green not-italic">match</em>
           </a>
           <div class="flex items-center gap-3 px-3 py-3 bg-bg/40 rounded-xl">
-            <div class="w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0">
-              ${name.charAt(0).toUpperCase()}
-            </div>
+            ${user.image_url
+              ? `<img src="${escHtml(user.image_url)}" class="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                      onerror="this.outerHTML='<div class=\\'w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0\\'>${name.charAt(0).toUpperCase()}</div>'">`
+              : `<div class="w-9 h-9 rounded-full bg-green/20 flex items-center justify-center text-green font-700 text-sm flex-shrink-0">${name.charAt(0).toUpperCase()}</div>`
+            }
             <div class="min-w-0">
               <p class="text-sm font-600 text-text truncate">${escHtml(name)}</p>
               <p class="text-xs text-muted truncate">Spotify</p>
@@ -437,20 +439,31 @@
       renderMovieGrid(data.recommendations || []);
     }
 
+    const EMOTION_COLORS = {
+      joy:      '#FFE66D',
+      sadness:  '#4ECDC4',
+      anger:    '#FF6B6B',
+      fear:     '#A78BFA',
+      surprise: '#FB923C',
+      disgust:  '#4ADE80',
+      neutral:  '#6B7280',
+    };
+
     function renderEmotionBars(emotions) {
       const container = document.getElementById('emotion-bars');
       const entries   = Object.entries(emotions).sort((a,b) => b[1] - a[1]).slice(0, 7);
       container.innerHTML = entries.map(([label, val]) => {
-        const pct = Math.round(val * 100);
+        const pct   = Math.round(val * 100);
+        const color = EMOTION_COLORS[label] || '#1DB954';
         return `
           <div>
             <div class="flex justify-between text-xs mb-1">
-              <span class="text-text capitalize">${escHtml(label)}</span>
-              <span class="text-muted">${pct}%</span>
+              <span class="capitalize" style="color:${color}">${escHtml(label)}</span>
+              <span class="text-muted font-600">${pct}%</span>
             </div>
-            <div class="h-1.5 w-full bg-bg rounded-full overflow-hidden">
-              <div class="h-1.5 bg-green rounded-full transition-all duration-700"
-                   style="width:${pct}%"></div>
+            <div class="h-2 w-full bg-bg rounded-full overflow-hidden">
+              <div class="h-2 rounded-full transition-all duration-700"
+                   style="width:${pct}%;background:${color};opacity:0.85"></div>
             </div>
           </div>`;
       }).join('');
@@ -482,23 +495,21 @@
             <div class="relative w-full aspect-[2/3] flex items-center justify-center overflow-hidden"
                  style="background:linear-gradient(135deg,${posterGradient(i)})">
               ${posterImg}
-              <!-- Match badge overlay -->
-              <div class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-700"
-                   style="background:rgba(29,185,84,0.9);color:#000">🎯 ${pct}%</div>
               <!-- Rank -->
               <div class="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-700"
                    style="background:rgba(0,0,0,0.6);color:#EAEAEA">${i+1}</div>
             </div>
 
             <!-- Info -->
-            <div class="p-3 flex flex-col gap-1.5 flex-1">
+            <div class="p-3 flex flex-col gap-2 flex-1">
               <h3 class="font-700 text-sm leading-tight line-clamp-2" style="color:#EAEAEA">${escHtml(m.title)}</h3>
-              <div class="flex items-center gap-2 text-xs">
-                <span class="font-600" style="color:#FFE66D">★ ${(m.vote_average||0).toFixed(1)}</span>
-                <span style="color:#6B7280">${escHtml(String(m.release_year || ''))}</span>
+              <!-- Stats row: genre · IMDB · match -->
+              <div class="flex items-center gap-1.5 flex-wrap">
+                ${(m.genres||[])[0] ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-600" style="background:rgba(255,107,107,0.15);color:#FF6B6B">${escHtml((m.genres||[])[0])}</span>` : ''}
+                <span class="text-[10px] font-700 px-1.5 py-0.5 rounded" style="background:rgba(255,230,109,0.15);color:#FFE66D">★ ${(m.vote_average||0).toFixed(1)}</span>
+                <span class="text-[10px] font-700 px-1.5 py-0.5 rounded" style="background:rgba(29,185,84,0.15);color:#1DB954">🎯 ${pct}%</span>
               </div>
-              <div class="flex flex-wrap gap-1">${genres}</div>
-              <div class="mt-auto pt-1.5 text-xs font-500 transition-colors group-hover:text-[#FF6B6B]"
+              <div class="mt-auto pt-0.5 text-xs font-500 transition-colors group-hover:text-[#FF6B6B]"
                    style="color:#6B7280">View details →</div>
             </div>
           </div>`;
