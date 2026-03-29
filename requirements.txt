@@ -1,9 +1,6 @@
 # CPU-only PyTorch — avoids downloading 2GB CUDA libraries on deployment
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Web App
-streamlit>=1.32.0
-
 # Spotify
 spotipy>=2.23.0
 
@@ -18,10 +15,6 @@ torch>=2.2.0
 numpy>=1.26.0
 pandas>=2.2.0
 
-# Visualization
-plotly>=5.19.0
-matplotlib>=3.8.0
-
 # Groq API (free, Llama 3)
 groq>=0.9.0
 
@@ -32,4 +25,3 @@ uvicorn[standard]>=0.29.0
 # HTTP & Utils
 requests>=2.31.0
 python-dotenv>=1.0.0
-Pillow>=10.2.0
