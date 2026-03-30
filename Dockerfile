@@ -13,14 +13,6 @@ COPY requirements.txt .
 # Install Python dependencies (CPU-only torch)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download ML models at build time (avoids runtime HF Hub rate limits)
-RUN python -c "\
-from transformers import pipeline; \
-pipeline('text-classification', model='j-hartmann/emotion-english-distilroberta-base', top_k=None, device=-1); \
-from sentence_transformers import SentenceTransformer; \
-SentenceTransformer('all-MiniLM-L6-v2'); \
-print('Models downloaded successfully')"
-
 # Copy application code
 COPY . .
 
