@@ -1,13 +1,3 @@
----
-title: musicmatch
-emoji: 🎬
-colorFrom: green
-colorTo: purple
-sdk: docker
-pinned: false
-app_port: 7860
----
-
 # musicmatch
 
 **Your music, your movies.**
