@@ -6,6 +6,9 @@ musicmatch analyzes your Spotify listening history, builds a music personality p
 
 🔗 **Live demo:** [jatuns-musicmatch.hf.space](https://jatuns-musicmatch.hf.space)
 
+> **Denemek ister misin?** Spotify API erişimi kısıtlı olduğundan uygulamayı test etmek için benimle iletişime geçmen gerekiyor.
+> 📬 GitHub: [@jatuns](https://github.com/jatuns) · LinkedIn: [Barış Tuna Tuğrul](https://www.linkedin.com/in/baristunatugrul/)
+
 ---
 
 ## How It Works
