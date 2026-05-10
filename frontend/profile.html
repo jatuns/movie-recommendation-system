@@ -536,30 +536,48 @@
       }
       const allX = [...centroids.map(c => c.x), user_position.x];
       const allY = [...centroids.map(c => c.y), user_position.y];
-      const pad  = 0.5;
+      const pad  = 0.6;
       const minX = Math.min(...allX) - pad, maxX = Math.max(...allX) + pad;
       const minY = Math.min(...allY) - pad, maxY = Math.max(...allY) + pad;
       const W = 100, H = 80;
       const tx = x => ((x-minX)/(maxX-minX)*W).toFixed(2);
       const ty = y => ((1-(y-minY)/(maxY-minY))*H).toFixed(2);
-      let defs='', blobs='', dots='', labels='';
+
+      const sims = personality.all_similarities || {};
+      const ux = tx(user_position.x), uy = ty(user_position.y);
+
+      let defs='', blobs='', lines='', dots='', labels='';
       for (const c of centroids) {
-        const cx=tx(c.x), cy=ty(c.y);
-        const gid='g'+cx.replace('.','')+'_'+cy.replace('.','');
-        defs   += `<radialGradient id="${gid}" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${c.color}" stop-opacity="0.28"/><stop offset="100%" stop-color="${c.color}" stop-opacity="0"/></radialGradient>`;
-        blobs  += `<ellipse cx="${cx}" cy="${cy}" rx="10" ry="8" fill="url(#${gid})"/>`;
-        dots   += `<circle cx="${cx}" cy="${cy}" r="1.1" fill="${c.color}"/>`;
-        labels += `<text x="${cx}" y="${(+cy+4.2).toFixed(2)}" text-anchor="middle" font-family="Plus Jakarta Sans,sans-serif" font-size="2.4" fill="rgba(234,234,234,0.72)">${c.emoji} ${escHtml(c.name)}</text>`;
+        const cx = tx(c.x), cy = ty(c.y);
+        const gid = 'g' + cx.replace('.','') + '_' + cy.replace('.','');
+        const sim = sims[c.name] != null ? sims[c.name] : 0.3;
+        const isTop = c.name === user_personality;
+
+        defs   += `<radialGradient id="${gid}" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${c.color}" stop-opacity="0.34"/><stop offset="100%" stop-color="${c.color}" stop-opacity="0"/></radialGradient>`;
+        blobs  += `<ellipse cx="${cx}" cy="${cy}" rx="11" ry="9" fill="url(#${gid})"/>`;
+
+        const lineOp = (0.18 + sim * 0.55).toFixed(2);
+        const lineW  = (0.35 + sim * 0.7).toFixed(2);
+        const dash   = isTop ? '' : `stroke-dasharray="1.4,1.2"`;
+        lines += `<line x1="${ux}" y1="${uy}" x2="${cx}" y2="${cy}" stroke="${c.color}" stroke-width="${lineW}" stroke-opacity="${lineOp}" ${dash}/>`;
+
+        if (isTop) {
+          dots += `<circle cx="${cx}" cy="${cy}" r="4.0" fill="none" stroke="${c.color}" stroke-width="0.5" stroke-opacity="0.6"/>`;
+        }
+        dots += `<circle cx="${cx}" cy="${cy}" r="2.6" fill="${c.color}" stroke="#0F1A2E" stroke-width="0.6"/>`;
+
+        labels += `<text x="${cx}" y="${(+cy + 5.6).toFixed(2)}" text-anchor="middle" font-family="Plus Jakarta Sans,sans-serif" font-size="2.7" font-weight="${isTop ? '700' : '500'}" fill="${isTop ? c.color : 'rgba(234,234,234,0.78)'}">${c.emoji} ${escHtml(c.name)}</text>`;
       }
-      const ux=tx(user_position.x), uy=ty(user_position.y);
-      const rings=`<circle cx="${ux}" cy="${uy}" r="4.5" fill="none" stroke="#1DB954" stroke-width="0.4" class="mm-pulse"/>
-        <circle cx="${ux}" cy="${uy}" r="2.8" fill="none" stroke="#1DB954" stroke-width="0.5" class="mm-pulse2"/>
-        <circle cx="${ux}" cy="${uy}" r="1.4" fill="#1DB954"/>
-        <text x="${ux}" y="${(+uy-3.2).toFixed(2)}" text-anchor="middle" font-family="Plus Jakarta Sans,sans-serif" font-size="2.4" font-weight="700" fill="#1DB954">You</text>`;
+
+      const rings = `<circle cx="${ux}" cy="${uy}" r="5.5" fill="none" stroke="#1DB954" stroke-width="0.45" class="mm-pulse"/>
+        <circle cx="${ux}" cy="${uy}" r="3.4" fill="none" stroke="#1DB954" stroke-width="0.55" class="mm-pulse2"/>
+        <circle cx="${ux}" cy="${uy}" r="1.9" fill="#1DB954" stroke="#0F1A2E" stroke-width="0.55"/>
+        <text x="${ux}" y="${(+uy - 3.6).toFixed(2)}" text-anchor="middle" font-family="Plus Jakarta Sans,sans-serif" font-size="2.9" font-weight="800" fill="#1DB954">You</text>`;
+
       document.getElementById('cluster-loading').style.display = 'none';
       document.getElementById('cluster-map-svg').innerHTML =
-        `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:320px;display:block">
-          <defs>${defs}</defs>${blobs}${dots}${labels}${rings}</svg>`;
+        `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:380px;display:block">
+          <defs>${defs}</defs>${blobs}${lines}${dots}${labels}${rings}</svg>`;
     }
 
     if (sid) {

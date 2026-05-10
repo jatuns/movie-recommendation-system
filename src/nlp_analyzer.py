@@ -102,41 +102,79 @@ def analyze_emotions(classifier, text: str) -> dict:
 
 def compute_emotion_profile(tracks_with_lyrics: pd.DataFrame) -> dict:
     """
-    Averages emotion scores across all tracks using batch inference.
-    Returns: {"joy": 0.3, "sadness": 0.4, ...} as the user's emotion profile
+    Averages emotion scores across tracks that have analyzable lyrics.
+    Tracks without lyrics are skipped (not folded in as neutral).
+    If lyrics analysis is uninformative (mostly neutral — common with
+    non-English lyrics or instrumentals), blend with an audio-feature
+    heuristic so the user doesn't see "100% Neutral".
     """
     classifier = load_emotion_model()
     print("Analyzing lyrics...")
 
-    # Split tracks into those with usable lyrics vs those without
-    texts, no_lyric_indices, text_indices = [], [], []
-    for i, (_, row) in enumerate(tracks_with_lyrics.iterrows()):
+    texts = []
+    for _, row in tracks_with_lyrics.iterrows():
         lyrics = row.get("lyrics")
         if lyrics and len(str(lyrics).strip()) >= 20:
             texts.append(str(lyrics)[:512])
-            text_indices.append(i)
-        else:
-            no_lyric_indices.append(i)
 
-    neutral = {e: (1.0 if e == "neutral" else 0.0) for e in EMOTIONS}
-    emotion_records = [None] * len(tracks_with_lyrics)
+    n_with = len(texts)
+    n_total = len(tracks_with_lyrics)
+    print(f"  {n_with}/{n_total} tracks have analyzable lyrics")
 
-    # Batch inference for tracks with lyrics
-    if texts:
-        try:
-            batch_results = classifier(texts, batch_size=8)
-            for i, results in zip(text_indices, batch_results):
-                scores = {r["label"].lower(): r["score"] for r in results}
-                emotion_records[i] = {e: scores.get(e, 0.0) for e in EMOTIONS}
-        except Exception:
-            for i in text_indices:
-                emotion_records[i] = neutral
+    if not texts:
+        print("  No usable lyrics — using audio-feature emotion fallback")
+        return _audio_feature_emotion_fallback(tracks_with_lyrics)
 
-    for i in no_lyric_indices:
-        emotion_records[i] = neutral
+    try:
+        batch_results = classifier(texts, batch_size=8)
+    except Exception as e:
+        print(f"  Emotion classifier error: {e} — using audio-feature fallback")
+        return _audio_feature_emotion_fallback(tracks_with_lyrics)
 
-    emotion_df = pd.DataFrame(emotion_records)
-    return emotion_df.mean().to_dict()
+    emotion_records = []
+    for results in batch_results:
+        scores = {r["label"].lower(): r["score"] for r in results}
+        emotion_records.append({e: scores.get(e, 0.0) for e in EMOTIONS})
+
+    profile = pd.DataFrame(emotion_records).mean().to_dict()
+
+    # If neutral dominates (likely non-English lyrics), blend with audio fallback
+    if profile.get("neutral", 0) > 0.6:
+        print(f"  High neutral ({profile['neutral']:.2f}) — blending with audio fallback")
+        audio_emotion = _audio_feature_emotion_fallback(tracks_with_lyrics)
+        w_audio = min(0.7, profile["neutral"])
+        profile = {
+            e: (1 - w_audio) * profile.get(e, 0.0) + w_audio * audio_emotion.get(e, 0.0)
+            for e in EMOTIONS
+        }
+
+    return profile
+
+
+def _audio_feature_emotion_fallback(tracks_df: pd.DataFrame) -> dict:
+    """
+    Heuristic emotion vector from average audio features.
+    Loosely follows Russell's circumplex (valence × arousal).
+    """
+    if tracks_df.empty or "energy" not in tracks_df.columns:
+        return {e: (1.0 if e == "neutral" else 0.0) for e in EMOTIONS}
+
+    energy       = float(tracks_df["energy"].mean())
+    valence      = float(tracks_df["valence"].mean())
+    acousticness = float(tracks_df["acousticness"].mean()) if "acousticness" in tracks_df else 0.3
+    danceability = float(tracks_df["danceability"].mean()) if "danceability" in tracks_df else 0.5
+
+    raw = {
+        "joy":      valence * 0.6 + danceability * 0.4,
+        "sadness":  (1 - valence) * 0.5 + acousticness * 0.5,
+        "anger":    energy * (1 - valence) * 1.2,
+        "fear":     (1 - valence) * 0.3 + energy * 0.15,
+        "surprise": danceability * 0.3 + energy * 0.2,
+        "disgust":  0.05,
+        "neutral":  0.15,
+    }
+    total = sum(raw.values()) or 1.0
+    return {e: v / total for e, v in raw.items()}
 
 
 def build_user_feature_vector(tracks_df: pd.DataFrame, emotion_profile: dict) -> np.ndarray:

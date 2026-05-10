@@ -56,14 +56,19 @@ DEFAULT_FEATURES = {"energy": 0.5, "valence": 0.5, "danceability": 0.5, "acousti
 
 
 def _estimate_features_from_genres(genres: list[str]) -> dict:
-    """Estimates audio features from an artist's genre list."""
+    """
+    Estimates audio features from an artist's genre list.
+    Collects ALL keyword matches per genre string (not just the first),
+    so "indie pop" picks up both "indie" and "pop" and averages them —
+    otherwise the substring search would always grab the dict's first
+    match and bias every estimate the same way.
+    """
     matched = []
     for genre in genres:
         genre_lower = genre.lower()
         for key, features in GENRE_FEATURE_MAP.items():
             if key in genre_lower:
                 matched.append(features)
-                break
 
     if not matched:
         return DEFAULT_FEATURES.copy()
