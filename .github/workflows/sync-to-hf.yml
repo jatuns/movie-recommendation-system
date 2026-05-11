@@ -13,20 +13,31 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (full history)
+      - name: Checkout (HEAD only)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          lfs: true
+          fetch-depth: 1
 
-      - name: Push to HuggingFace Spaces
+      - name: Push snapshot to HuggingFace Spaces
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           if [ -z "${HF_TOKEN}" ]; then
             echo "::error::HF_TOKEN secret is not set. Add it under Settings -> Secrets and variables -> Actions."
             exit 1
           fi
+          # Re-init a fresh single-commit repo from the working tree only.
+          # This drops any historical blobs (e.g. data/movie_embeddings.npy
+          # that pre-dates the .gitignore entry) so HF's binary-file check
+          # never sees them.
+          rm -rf .git
+          git init -q -b main
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions (HF sync)"
+          git add -A
+          git commit -q -m "Sync from ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
           git push --force \
             "https://jatuns:${HF_TOKEN}@huggingface.co/spaces/jatuns/musicmatch.git" \
             HEAD:main
