@@ -1,3 +1,14 @@
+---
+title: Music Match
+emoji: 🎵
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+short_description: Music personality analysis → personalized movie recommendations
+---
+
 # musicmatch
 
 **Your music, your movies.**
