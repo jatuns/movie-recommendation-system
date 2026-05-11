@@ -6,7 +6,7 @@ colorTo: blue
 sdk: docker
 app_port: 7860
 pinned: false
-short_description: Music personality analysis → personalized movie recommendations
+short_description: Music taste → AI-curated movie recommendations
 ---
 
 # musicmatch
